@@ -1,7 +1,7 @@
 // Route mode: how many months a year a shipping route is open. Pure, no DOM.
 
 import { normLon, latOf, lonOf } from "./grid.js";
-import { parseMonth, monthOfIndex } from "./time.js";
+import { parseMonth, monthOfIndex, seasonPlan } from "./time.js";
 
 const rad = Math.PI / 180;
 
@@ -33,8 +33,14 @@ function slerp(a, b, f) {
 // longitude, taking the short way round in longitude (ships follow coasts and
 // waypoints, not great circles); pass { greatCircle: true } for flight paths.
 // Consecutive samples in the same cell are merged and samples off the grid are
-// dropped. Returns [{ lat, lon, i, j }], lat/lon being the cell centre.
-export function sampleRoute(route, grid, { greatCircle = false } = {}) {
+// dropped. Returns [[lat, lon], ...], each the centre of a sampled cell, so
+// the map can draw exactly the path routeOpen tests.
+export function sampleRoute(route, grid, opts = {}) {
+  return sampleCells(route, grid, opts).map((c) => [c.lat, c.lon]);
+}
+
+// The same samples with their grid indices: [{ lat, lon, i, j }].
+export function sampleCells(route, grid, { greatCircle = route?.greatCircle ?? false } = {}) {
   const pts = route.points ?? route;
   const out = [];
   let last = -1;
@@ -65,56 +71,64 @@ export function sampleRoute(route, grid, { greatCircle = false } = {}) {
   return out;
 }
 
-// routeOpen(v, route, { max, greatCircle })
+// routeOpen(v, route, { max, greatCircle, months })
 //
 // A month is open if every route sample with data is <= max (samples on
 // missing cells, such as land, are ignored; a month with no valid sample is
-// not open). Only calendar years with all twelve months in the record are
+// not open). `months` limits which calendar months are checked (default all
+// twelve); only years with every one of those months in the record are
 // reported.
+//   samples            [[lat, lon], ...], the same as sampleRoute
 //   openMonths[y]      number of open months in years[y]
 //   openMonthList[y]   which months (1..12) were open
 //   chokePointIndex    index into `samples` of the point that blocks the
-//                      route in the most months (value above max); -1 if the
-//                      route was never blocked or has no samples
+//                      route in the most checked months (value above max);
+//                      -1 if the route was never blocked or has no samples
 export function routeOpen(v, route, opts = {}) {
   const max = opts.max ?? 0.15;
   const { entry } = v;
-  const samples = sampleRoute(route, entry.grid, opts);
+  const cells = sampleCells(route, entry.grid, opts);
+  const plan = seasonPlan(opts.months);
   const { year: y0, month: m0 } = parseMonth(entry.start);
 
   const byYear = new Map();
-  const blockCount = new Int32Array(samples.length);
+  const blockCount = new Int32Array(cells.length);
   for (let t = 0; t < entry.nt; t++) {
     const { year, month } = monthOfIndex(y0, m0, t);
+    if (!plan.selected[month]) continue;
     let valid = 0, open = true;
-    for (let k = 0; k < samples.length; k++) {
-      const val = v.value(t, samples[k].i, samples[k].j);
+    for (let k = 0; k < cells.length; k++) {
+      const val = v.value(t, cells[k].i, cells[k].j);
       if (val !== val) continue;
       valid++;
       if (val > max) { open = false; blockCount[k]++; }
     }
     if (valid === 0) open = false;
-    if (!byYear.has(year)) byYear.set(year, { n: 0, open: [] });
-    const rec = byYear.get(year);
+    const sy = year + plan.yearShift[month];
+    if (!byYear.has(sy)) byYear.set(sy, { n: 0, open: [] });
+    const rec = byYear.get(sy);
     rec.n++;
     if (open) rec.open.push(month);
   }
 
-  const years = [...byYear.keys()].filter((y) => byYear.get(y).n === 12).sort((a, b) => a - b);
+  const years = [...byYear.keys()].filter((y) => byYear.get(y).n === plan.count).sort((a, b) => a - b);
   const openMonths = years.map((y) => byYear.get(y).open.length);
   const openMonthList = years.map((y) => byYear.get(y).open);
 
   let chokePointIndex = -1, best = 0;
-  for (let k = 0; k < samples.length; k++) if (blockCount[k] > best) { best = blockCount[k]; chokePointIndex = k; }
+  for (let k = 0; k < cells.length; k++) if (blockCount[k] > best) { best = blockCount[k]; chokePointIndex = k; }
 
+  const samples = cells.map((c) => [c.lat, c.lon]);
   return {
     years,
     openMonths,
-    chokePointIndex,
-    // Extras beyond the contract.
     openMonthList,
     samples,
+    chokePointIndex,
+    // Extras beyond the contract.
     chokePoint: chokePointIndex >= 0 ? samples[chokePointIndex] : null,
+    sampleCells: cells,
     max,
+    months: Array.from({ length: 12 }, (_, k) => k + 1).filter((m) => plan.selected[m]),
   };
 }

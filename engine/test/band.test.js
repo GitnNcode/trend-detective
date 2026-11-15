@@ -47,6 +47,27 @@ test("a strip band moving 1° per decade reports about 111 km per decade as a sh
   assert.ok(mid > 5 && mid < 20);
 });
 
+test("a strip clipped by the region border falls back to the edge it can follow", () => {
+  // As in the real North Atlantic jet: the equatorward edge crosses the
+  // region's southern border partway through the record.
+  const r = rng(12);
+  const v = synthVar({ units: "m/s", nt: 45 * 12 }, ({ lat, k }) => {
+    const c = 40 + 0.1 * k;
+    return 45 * Math.exp(-(((lat - c) / 9) ** 2)) + 0.5 * r.normal();
+  });
+  const track = bandTrack(v, { min: 30, region: { latMin: 36, latMax: 80, lonMin: -80, lonMax: 0 } });
+  assert.equal(track.bandShape, "strip");
+  const s = bandSummary(track);
+  assert.equal(s.edgeUsed, "poleward");
+  within(s.edgeShiftKmPerDecade, KM_PER_DEG_LAT, 0.1);
+  assert.equal(s.kind, "shift");
+
+  // A region too narrow to hold either edge: the sentence says so.
+  const narrow = bandSummary(bandTrack(v, { min: 30, region: { latMin: 41, latMax: 45, lonMin: -80, lonMax: 0 } }));
+  assert.equal(narrow.edgeUsed, "none");
+  assert.match(narrow.sentence, /runs into the border of the region/);
+});
+
 test("a cold cap whose edge retreats 1° per decade is a contraction with a poleward edge shift", (t) => {
   const r = rng(6);
   const v = synthVar({ nt: 45 * 12 }, ({ lat, k, month }) => {

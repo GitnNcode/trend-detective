@@ -284,25 +284,38 @@ export function bandSummary(track) {
   out.areaPctPerDecade = (area.slope * 10 * 100) / meanArea;
   out.areaP = area.p;
 
-  const strip = track.bandShape === "strip";
+  // A strip is measured by its centre line and width, which needs both edges
+  // in the same columns. When the region's border clips one edge in most
+  // columns, fall back to whichever single edge can be followed.
+  let strip = track.bandShape === "strip";
+  let edgeUsed = strip ? "both" : track.edgeKind;
   let move, width = null;
   let series;
   if (strip) {
     const center = combine(track.polewardEdgeLat, track.equatorwardEdgeLat, (p, e) => (p + e) / 2);
-    const widths = combine(track.polewardEdgeLat, track.equatorwardEdgeLat, (p, e) => (p - e) * hemSign);
     series = edgeSeries(center);
-    move = trendOf(years, series.values);
-    const ws = edgeSeries(widths);
-    width = trendOf(years, ws.values);
-    out.widthChangeKmPerDecade = width.slope * KM_PER_DEG_LAT * 10;
+    if (series.nColumns >= MIN_EDGE_COLUMNS) {
+      move = trendOf(years, series.values);
+      const widths = combine(track.polewardEdgeLat, track.equatorwardEdgeLat, (p, e) => (p - e) * hemSign);
+      width = trendOf(years, edgeSeries(widths).values);
+      out.widthChangeKmPerDecade = width.slope * KM_PER_DEG_LAT * 10;
+    } else {
+      strip = false;
+      const po = edgeSeries(track.polewardEdgeLat);
+      const eq = edgeSeries(track.equatorwardEdgeLat);
+      [series, edgeUsed] = po.nColumns >= eq.nColumns ? [po, "poleward"] : [eq, "equatorward"];
+    }
   } else {
     series = edgeSeries(track.edgeLat);
-    move = trendOf(years, series.values);
   }
+  if (!move) move = trendOf(years, series.values);
+  const traceable = series.nColumns >= MIN_EDGE_COLUMNS;
+  if (!traceable) move = { slope: NaN, p: NaN, pMK: NaN, level: "none", n: 0 };
   out.edgeShiftKmPerDecade = kmPerDecade(move.slope);
   out.edgeP = move.p;
-  out.edgeMeanLat = Array.from(series.values, (d) => series.meanLat + d);
+  out.edgeMeanLat = traceable ? Array.from(series.values, (d) => series.meanLat + d) : new Array(ny).fill(NaN);
   out.edgeColumns = series.nColumns;
+  out.edgeUsed = traceable ? edgeUsed : "none";
 
   const shiftKm = out.edgeShiftKmPerDecade;
   const shiftText = Number.isFinite(shiftKm)
@@ -335,9 +348,16 @@ export function bandSummary(track) {
     if (strip && width.level === "suggestive") hints.push(`${width.slope > 0 ? "widening" : "narrowing"} by about ${fmt(Math.abs(out.widthChangeKmPerDecade))} km per decade`);
     if (!strip && area.level === "suggestive") hints.push(`${area.slope > 0 ? "growing" : "shrinking"} by about ${areaText}`);
     out.level = hints.length ? "suggestive" : "none";
+    const noEdge = traceable ? "" :
+      " Its edge could not be followed in most years because it runs into the border of the region, so only its size was tested. A larger region may show the edge.";
     out.sentence = hints.length
-      ? `There is a hint that the band is ${hints.join(" and ")}, but it is not strong enough to call a trend. A longer record may be needed.`
-      : `No clear movement. The band's edge and size change only a little compared with the swings from year to year. A longer record may be needed.`;
+      ? `There is a hint that the band is ${hints.join(" and ")}, but it is not strong enough to call a trend. A longer record may be needed.${noEdge}`
+      : traceable
+        ? `No clear movement. The band's edge and size change only a little compared with the swings from year to year. A longer record may be needed.`
+        : `No clear change in the band's size compared with the swings from year to year.${noEdge}`;
   }
   return out;
 }
+
+// Fewest longitude columns with a traceable edge before a movement is reported.
+const MIN_EDGE_COLUMNS = 3;

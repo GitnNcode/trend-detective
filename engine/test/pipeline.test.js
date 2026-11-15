@@ -68,7 +68,11 @@ test("whole pipeline on synthetic data with missing land cells", () => {
   runAll(ice, "seaice");
 });
 
-const root = fileURLToPath(new URL("../../data/", import.meta.url));
+// TD_DATA_DIR points at another checkout's /data folder (for example Lane 1's
+// branch before it is merged).
+const root = process.env.TD_DATA_DIR
+  ? process.env.TD_DATA_DIR.replace(/\/?$/, "/")
+  : fileURLToPath(new URL("../../data/", import.meta.url));
 for (const dir of ["mock/", ""]) {
   const catalogPath = root + dir + "catalog.json";
   const exists = await access(catalogPath).then(() => true, () => false);

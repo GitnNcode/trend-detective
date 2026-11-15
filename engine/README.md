@@ -16,7 +16,8 @@ const card = E.verdict(trend, mk, v.entry.units); // { level, sentence, perDecad
 const map = E.trendMap(v, months);                 // slope[c], p[c], c = i*nlon + j
 const track = E.bandTrack(v, { min, max, months, region });
 const shift = E.bandSummary(track);
-const route = E.routeOpen(v, routes[0], { max: 0.15 });
+const route = E.routeOpen(v, routes[0], { max: 0.15, months: [7, 8, 9, 10] });
+const path = E.sampleRoute(routes[0], v.entry.grid);   // [[lat, lon], ...] to draw
 ```
 
 ## Commands
@@ -26,6 +27,8 @@ const route = E.routeOpen(v, routes[0], { max: 0.15 });
 | `cd engine && npm test` | Runs every test with `node --test` |
 | `node engine/bench.js` | Times every call on synthetic data at real size, against a 200 ms budget |
 | `node engine/bench.js data/mock` | The same on Lane 1's mock files (or `data` for the real ones) |
+| `node engine/realcheck.js data content` | Runs every demo step and sample question on real data and prints the numbers (for Lane 4's narration), plus the validation checks |
+| `TD_DATA_DIR=/path/to/data npm test` | Runs the data tests against another checkout's `/data` |
 
 `test/pipeline.test.js` runs the whole API over `/data/mock` and `/data` as soon as a `catalog.json` shows up there. Until then those two tests are skipped.
 
@@ -46,6 +49,8 @@ const route = E.routeOpen(v, routes[0], { max: 0.15 });
    - a strip (a jet core above 30 m/s) gets both edges
 
    `edgeKind` and `bandShape` say which case was chosen. Edges are interpolated to where the field crosses the threshold, so they move smoothly instead of in 2° steps.
+
+   If the region's border clips one edge of a strip in most columns (the real North Atlantic jet does this), `bandSummary` follows the edge it can trace instead (`edgeUsed`). If neither edge can be traced in at least 3 columns, it tests only the size and the sentence says the edge runs into the region border.
 2. **Shift vs expansion.**
    - Strip: the width trend decides expansion or contraction, and the centre-line trend decides shift. Area alone would make a band that moves poleward look like it is shrinking, because cells get smaller toward the pole.
    - One-edge band: the area trend decides expansion or contraction. If area is flat but the edge moves, it is a shift.
@@ -53,6 +58,8 @@ const route = E.routeOpen(v, routes[0], { max: 0.15 });
 3. **Hemisphere.** Edges are traced in one hemisphere. That is the southern one only when the region lies wholly south of the equator, otherwise the northern one. You can override it with `hemisphere: "N" | "S"`. Area and centroid use the whole region.
 4. **Routes.** The path between waypoints is a straight line in lat/lon, the short way round. Ships follow coasts and waypoints, not great circles. Pass `{ greatCircle: true }` for the flight path.
    - Missing cells (land) along a route are ignored.
+   - `months` limits which months are checked (the demo uses July to October).
+   - `samples` and `sampleRoute` are `[[lat, lon], ...]`, the centres of the cells actually tested.
    - `chokePointIndex` indexes `samples` (also returned). It points at the sample that is above `max` in the most months.
    - Only complete calendar years are reported.
 5. **trendMap p** is the per-cell t-test only (fast enough to recompute on every interaction). The two-test verdict is used for region series and bands.
@@ -68,7 +75,17 @@ The contract fields are unchanged. Some returns also carry extra fields:
 | `verdict` | `perDecade`, `ci95PerDecade`, `pT`, `pMK`, `n`, `direction` |
 | `trendMap` | `years` |
 | `bandTrack` | `equatorwardEdgeLat`, `polewardEdgeLat`, `edgeKind`, `bandShape`, `hemisphere` |
-| `bandSummary` | `level`, `areaPctPerDecade`, `areaP`, `widthChangeKmPerDecade`, `edgeMeanLat` |
-| `routeOpen` | `openMonthList`, `samples`, `chokePoint` |
+| `bandSummary` | `level`, `areaPctPerDecade`, `areaP`, `widthChangeKmPerDecade`, `edgeMeanLat`, `edgeUsed`, `edgeColumns` |
+| `routeOpen` | `chokePoint`, `sampleCells`, `months` |
 
-`index.js` also exports helpers: `sampleRoute` (to draw the same path the engine samples), `latOf`, `lonOf`, `rowAreasKm2`, `regionCells`, `fromBuffer`, `significanceLevel`, `fmt`, `fmtP`, `timeLabels` and `annualFields`.
+`index.js` also exports helpers: `sampleCells` (the route samples with grid indices), `sampleRoute` (to draw the same path the engine samples), `latOf`, `lonOf`, `rowAreasKm2`, `regionCells`, `fromBuffer`, `significanceLevel`, `fmt`, `fmtP`, `timeLabels` and `annualFields`.
+
+## Checked on real data
+
+- Global mean 2 m temperature, 1980 to 2025: +0.165 °C per decade. This matches Lane 1's own check.
+- September Arctic ice extent (cells with at least 15% ice), 1980 to 2024: -11.7% of the 1981 to 2010 mean per decade, and 3.56 M km² in 2012. This matches Lane 1's check. NSIDC gives about -12% per decade.
+- All ten variables pass the full-pipeline test with no NaN sentences. The slowest call on real files takes 72 ms.
+
+No libraries, fonts or images ship from this folder.
+
+Code in this folder was written with Claude and reviewed by the team.

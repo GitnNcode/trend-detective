@@ -23,8 +23,9 @@
 //     -> { areaTrend (km² per decade), edgeShiftKmPerDecade (positive = poleward), edgeP,
 //          kind: "shift" | "expansion" | "contraction" | "none", sentence, level,
 //          areaPctPerDecade, areaP, widthChangeKmPerDecade, edgeMeanLat }
-//   routeOpen(v, route, { max, greatCircle })
-//     -> { years, openMonths, chokePointIndex, openMonthList, samples, chokePoint }
+//   routeOpen(v, route, { max, greatCircle, months })
+//     -> { years, openMonths, openMonthList, samples: [[lat, lon]], chokePointIndex, chokePoint, months }
+//   sampleRoute(route, grid, { greatCircle }) -> [[lat, lon], ...]  the path routeOpen samples
 
 export { loadVariable, regionSeries } from "./grid.js";
 export { deseasonalize, annualMeans, linearTrend, mannKendall, verdict } from "./stats.js";
@@ -39,5 +40,5 @@ export {
 } from "./grid.js";
 export { significanceLevel, fmt, fmtP, displayUnits, MIN_YEARS } from "./stats.js";
 export { annualFields } from "./fields.js";
-export { sampleRoute } from "./route.js";
+export { sampleRoute, sampleCells } from "./route.js";
 export { timeLabels, seasonPlan } from "./time.js";
