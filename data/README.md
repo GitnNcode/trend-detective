@@ -28,6 +28,18 @@ Earthdata credentials come from `~/.netrc` (`machine urs.earthdata.nasa.gov logi
 - `seaice` is ice fraction of the ocean, from `FRSEAICE` and the constant `FROCEAN` (M2C0NXASM). Native cells with `FROCEAN < 0.5` are land and stored as missing, never 0. `build.py` checks whether `FRSEAICE` is per grid box or per ocean tile and prints which.
 - Land variables (`soilwet`, `snow`, `runoff`) are undefined over ocean in MERRA-2 and stay missing.
 - The record is the run of consecutive months from 1980-01; a gap ends it (contract: no gaps).
+- Real files: `t2m`, `wind250`, `seaice`, `precip`, 1980-01 to 2026-09 (561 months). 2026 is a partial year.
+- Known issue: `precip` (PRECTOTCORR) has a spike over southern Italy in 2026-02 (up to 134 mm/day on our grid, 415 at native resolution). It comes from NASA's recent, preliminary months and is left as delivered. Use complete years up to 2025 for trends.
+
+## First check against published numbers
+
+| Quantity | Ours (MERRA-2) | Published |
+|---|---|---|
+| September Arctic sea ice extent trend, 1980-2024 | -11.7% of the 1981-2010 mean per decade | NSIDC: about -12% per decade (1979-2024) |
+| September 2012 extent (record low) | 3.56 M km² | NSIDC: 3.39 M km² |
+| Global mean 2 m temperature trend, 1980-2025 | +0.165 °C per decade | GISTEMP v4: about +0.19 °C per decade (to fill exactly in docs/VALIDATION.md) |
+
+Extent here is the area of cells with ice fraction at least 0.15 on our 1° grid north of 50°N.
 
 ## Datasets
 

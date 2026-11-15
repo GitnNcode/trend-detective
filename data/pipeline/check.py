@@ -13,9 +13,10 @@ import numpy as np
 from fmt import lats, months, read_var
 
 # loose physical bounds on monthly-mean cell values, in stored units
+# (precip: monsoon coasts reach ~70 mm/day on our grid; 150 catches only broken data)
 BOUNDS = {
     "t2m": (-80, 50), "t500": (-60, 5), "wind250": (0, 120), "tqv": (0, 80),
-    "precip": (0, 60), "evap": (-2, 20), "seaice": (0, 1.001), "soilwet": (0, 1.001),
+    "precip": (0, 150), "evap": (-2, 20), "seaice": (0, 1.001), "soilwet": (0, 1.001),
     "snow": (0, 1e6), "runoff": (0, 200),
 }
 

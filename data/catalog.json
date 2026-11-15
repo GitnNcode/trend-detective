@@ -1,0 +1,92 @@
+{
+  "variables": [
+    {
+      "id": "t2m",
+      "file": "t2m.bin",
+      "source": "MERRA-2 M2TMNXSLV, T2M",
+      "units": "°C",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.00174147,
+      "offset": -16.035455759999998,
+      "defaultBand": {
+        "min": null,
+        "max": 0
+      }
+    },
+    {
+      "id": "wind250",
+      "file": "wind250.bin",
+      "source": "MERRA-2 M2TMNXSLV, speed from monthly-mean U250 and V250",
+      "units": "m/s",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.00133658,
+      "offset": 43.48429372,
+      "defaultBand": {
+        "min": 30,
+        "max": null
+      }
+    },
+    {
+      "id": "precip",
+      "file": "precip.bin",
+      "source": "MERRA-2 M2TMNXFLX, PRECTOTCORR",
+      "units": "mm/day",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.00206137,
+      "offset": 66.994525,
+      "defaultBand": {
+        "min": 5,
+        "max": null
+      }
+    },
+    {
+      "id": "seaice",
+      "file": "seaice.bin",
+      "source": "MERRA-2 M2TMNXFLX, FRSEAICE / FROCEAN, land masked",
+      "units": "0 to 1",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 41,
+        "nlon": 288,
+        "lat0": 50.0,
+        "lon0": -180.0,
+        "dlat": 1.0,
+        "dlon": 1.25
+      },
+      "scale": 1.53846e-05,
+      "offset": 0.49999949999999993,
+      "defaultBand": {
+        "min": null,
+        "max": 0.15
+      }
+    }
+  ]
+}

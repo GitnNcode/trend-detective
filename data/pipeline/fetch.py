@@ -27,48 +27,39 @@ RAW = Path(__file__).resolve().parent / "raw"
 
 
 def granules(short_name, start, end):
-    """{YYYYMM: (cloud opendap url, data url)}; a reprocessed stream (e.g. MERRA2_401) wins over the original."""
+    """{YYYYMM: cloud OPeNDAP url}; a reprocessed stream (e.g. MERRA2_401) wins over the original."""
     temporal = None if short_name == CONST[0] else (start, end)
     out = {}
     for g in sorted(earthaccess.search_data(short_name=short_name, temporal=temporal),
                     key=lambda g: g["umm"]["GranuleUR"]):
         urls = [u["URL"] for u in g["umm"].get("RelatedUrls", [])]
         dap = next((u for u in urls if "opendap.earthdata.nasa.gov" in u), None)
-        data = next((u for u in urls if u.endswith(".nc4") and "/data/" in u), None)
         m = re.search(r"\.(\d{6}|00000000)\.nc4$", g["umm"]["GranuleUR"])
-        if m:
-            out[m.group(1)[:6]] = (dap, data)
+        if m and dap:
+            out[m.group(1)[:6]] = dap
     return out
 
 
-def fetch_one(session, key, urls, fields, dest):
+def fetch_one(session, key, dap, fields, dest):
+    """One DAP4 subset from NASA's cloud OPeNDAP (the old goldsmr4 server is retired, 410 Gone)."""
     if dest.exists():
         return "skip"
-    dap, data = urls
-    attempts = []
-    if dap:  # cloud Hyrax, DAP4
-        attempts.append((dap + ".dap.nc4", {"dap4.ce": ";".join(f"/{f}" for f in fields + ["lat", "lon"])}))
-    if data:  # GES DISC on-prem Hyrax, DAP2 netCDF4 response
-        onprem = re.sub(r"^https://data\.gesdisc\.earthdata\.nasa\.gov/data/",
-                        "https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/", data)
-        attempts.append((onprem + ".nc4?" + ",".join(fields + ["lat", "lon"]), None))
-    errors = []
     tmp = dest.with_suffix(".part")
-    for url, params in attempts:
-        try:
-            r = session.get(url, params=params, timeout=300)
-            r.raise_for_status()
-            tmp.write_bytes(r.content)
-            with xr.open_dataset(tmp) as ds:
-                missing = [f for f in fields if f not in ds]
-            if missing:
-                raise ValueError(f"response lacks {missing}")
-            tmp.rename(dest)
-            return "ok"
-        except Exception as e:  # try the next server, report all failures at the end
-            errors.append(f"{url[:90]}: {e}")
-            tmp.unlink(missing_ok=True)
-    raise RuntimeError(f"{key}: " + " | ".join(errors))
+    r = session.get(dap + ".dap.nc4", params={"dap4.ce": ";".join(f"/{f}" for f in fields + ["lat", "lon"])},
+                    timeout=300)
+    if r.status_code != 200:
+        # a 403 here usually means the account has not accepted the GES DISC EULA
+        raise RuntimeError(f"{key}: HTTP {r.status_code} {r.text[:200]}")
+    tmp.write_bytes(r.content)
+    try:
+        with xr.open_dataset(tmp) as ds:
+            missing = [f for f in fields if f not in ds]
+        if missing:
+            raise RuntimeError(f"{key}: response lacks {missing}")
+        tmp.rename(dest)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return "ok"
 
 
 def main():
