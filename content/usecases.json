@@ -1,0 +1,17 @@
+[
+  { "prompt": "Is the Arctic losing its summer ice?", "variable": "seaice", "region": "arctic", "months": [9], "mode": "band", "band": { "min": null, "max": 0.15 } },
+  { "prompt": "Is the Northern Sea Route open for more months each year?", "variable": "seaice", "region": "arctic", "months": [7, 8, 9, 10], "mode": "route", "route": "nsr", "band": { "min": null, "max": 0.15 } },
+  { "prompt": "Is the Arctic warming faster than the rest of the planet?", "variable": "t2m", "region": "arctic", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "series" },
+  { "prompt": "Is Antarctica warming as much as the Arctic?", "variable": "t2m", "region": "antarctic", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "series" },
+  { "prompt": "Is the winter jet stream over the North Atlantic moving?", "variable": "wind250", "region": "natlantic", "months": [12, 1, 2], "mode": "band", "band": { "min": 40, "max": null } },
+  { "prompt": "Is the Sahel getting wetter or drier in the rainy season?", "variable": "precip", "region": "sahel", "months": [7, 8, 9], "mode": "series" },
+  { "prompt": "Is the Mediterranean getting drier in the wet season?", "variable": "precip", "region": "mediterranean", "months": [11, 12, 1, 2, 3], "mode": "series" },
+  { "prompt": "Is the soil in the Amazon drying out in the dry season?", "variable": "soilwet", "region": "amazon", "months": [8, 9, 10], "mode": "series" },
+  { "prompt": "Is the soil in the Sahel getting wetter in the rainy season?", "variable": "soilwet", "region": "sahel", "months": [7, 8, 9], "mode": "series" },
+  { "prompt": "Where on Earth has the air warmed, and where has it cooled?", "variable": "t2m", "region": "global", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "map" },
+  { "prompt": "Is the air higher up changing the same way as the air near the ground?", "variable": "t500", "region": "global", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "map" },
+  { "prompt": "Is the air above the Northeast US cities getting more humid in summer?", "variable": "tqv", "region": "ne_us_corridor", "months": [6, 7, 8], "mode": "series" },
+  { "prompt": "Is there less snow on the ground in northern Siberia?", "variable": "snow", "region": "siberia", "months": [12, 1, 2], "mode": "series" },
+  { "prompt": "Is more water evaporating from the central tropical Pacific?", "variable": "evap", "region": "nino34", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "series" },
+  { "prompt": "Is more water running off the land around the Ganges delta in monsoon season?", "variable": "runoff", "region": "ganges_delta", "months": [6, 7, 8, 9], "mode": "series" }
+]

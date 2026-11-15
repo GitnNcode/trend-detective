@@ -1,0 +1,17 @@
+[
+  { "id": "global", "name": "Whole Earth", "type": "global", "latMin": -90, "latMax": 90, "lonMin": -180, "lonMax": 180 },
+  { "id": "arctic", "name": "Arctic", "type": "polar", "latMin": 66.5, "latMax": 90, "lonMin": -180, "lonMax": 180 },
+  { "id": "antarctic", "name": "Antarctic", "type": "polar", "latMin": -90, "latMax": -60, "lonMin": -180, "lonMax": 180 },
+  { "id": "barents", "name": "Barents and Kara Seas", "type": "polar", "latMin": 70, "latMax": 82, "lonMin": 15, "lonMax": 65 },
+  { "id": "siberia", "name": "Northern Siberia", "type": "polar", "latMin": 55, "latMax": 70, "lonMin": 60, "lonMax": 120 },
+  { "id": "natlantic", "name": "North Atlantic", "type": "ocean", "latMin": 35, "latMax": 60, "lonMin": -70, "lonMax": -10 },
+  { "id": "nino34", "name": "Central tropical Pacific", "type": "ocean", "latMin": -5, "latMax": 5, "lonMin": -170, "lonMax": -120 },
+  { "id": "mediterranean", "name": "Mediterranean basin", "type": "ocean", "latMin": 30, "latMax": 45, "lonMin": -10, "lonMax": 36 },
+  { "id": "sahel", "name": "Sahel", "type": "desert", "latMin": 10, "latMax": 20, "lonMin": -15, "lonMax": 35 },
+  { "id": "sahara", "name": "Sahara", "type": "desert", "latMin": 20, "latMax": 30, "lonMin": -15, "lonMax": 35 },
+  { "id": "amazon", "name": "Amazon rainforest", "type": "rainforest", "latMin": -10, "latMax": 5, "lonMin": -75, "lonMax": -50 },
+  { "id": "congo", "name": "Congo rainforest", "type": "rainforest", "latMin": -5, "latMax": 5, "lonMin": 10, "lonMax": 30 },
+  { "id": "ganges_delta", "name": "Ganges-Brahmaputra delta", "type": "estuary", "latMin": 20, "latMax": 26, "lonMin": 86, "lonMax": 94 },
+  { "id": "ne_us_corridor", "name": "Northeast US city corridor", "type": "city air", "latMin": 37, "latMax": 43, "lonMin": -80, "lonMax": -70 },
+  { "id": "north_china_plain", "name": "North China Plain cities", "type": "city air", "latMin": 33, "latMax": 41, "lonMin": 112, "lonMax": 120 }
+]
