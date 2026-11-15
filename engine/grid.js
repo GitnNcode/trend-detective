@@ -105,6 +105,27 @@ export async function loadVariable(entry, baseUrl) {
   return fromBuffer(entry, await res.arrayBuffer());
 }
 
+// Inclusive threshold bounds with a small tolerance, so a value stored as
+// exactly 0.15 counts as <= 0.15 even after Float32 rounding in the annual
+// fields. 1e-6 relative is far below the Int16 storage step of any variable.
+export function thresholdBounds(min, max) {
+  const tol = (x) => 1e-6 * Math.max(1, Math.abs(x));
+  return {
+    lo: min == null ? -Infinity : min - tol(min),
+    hi: max == null ? Infinity : max + tol(max),
+  };
+}
+
+// Column index of the cell containing longitude `lon`, or -1 if a regional
+// (not full-circle) grid does not cover it.
+export function lonIndex(grid, lon) {
+  let off = ((((lon - grid.lon0) % 360) + 360) % 360);
+  if (off > 360 - grid.dlon / 2) off -= 360;
+  const j = Math.round(off / grid.dlon);
+  if (grid.nlon * grid.dlon >= 359.999) return ((j % grid.nlon) + grid.nlon) % grid.nlon;
+  return j >= 0 && j < grid.nlon ? j : -1;
+}
+
 // Longitude range test that handles regions crossing the date line
 // (lonMin > lonMax, for example 170 to -170) and full-circle regions.
 export function lonInRange(lon, lonMin, lonMax) {
@@ -138,8 +159,8 @@ export function regionCells(grid, region) {
       const span = (((region.lonMax - region.lonMin) % 360) + 360) % 360;
       const cLon = normLon(region.lonMin + span / 2);
       const i = Math.round((cLat - grid.lat0) / grid.dlat);
-      const j = Math.round((((cLon - grid.lon0) % 360) + 360) % 360 / grid.dlon) % nlon;
-      if (i >= 0 && i < nlat) cells.push(i * nlon + j);
+      const j = lonIndex(grid, cLon);
+      if (i >= 0 && i < nlat && j >= 0) cells.push(i * nlon + j);
     }
   }
   const out = Int32Array.from(cells);

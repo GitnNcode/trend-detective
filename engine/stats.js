@@ -245,10 +245,19 @@ export function mannKendall(annual) {
   const zOf = (v) => (v <= 0 ? 0 : s > 0 ? (s - 1) / Math.sqrt(v) : s < 0 ? (s + 1) / Math.sqrt(v) : 0);
   const p = varS > 0 ? zTwoSidedP(zOf(varS)) : 1;
 
-  // Lag-1 autocorrelation of the Sen-detrended series.
-  let mean = 0;
+  // Lag-1 autocorrelation of the Sen-detrended series. Years are centred so
+  // the residuals are not swamped by rounding, and a fit whose residuals are
+  // only rounding noise (a perfect line) has no autocorrelation to correct.
+  let xm = 0, ym = 0;
+  for (let k = 0; k < n; k++) { xm += x[k]; ym += y[k]; }
+  xm /= n; ym /= n;
+  let syy = 0, mean = 0;
   const r = new Float64Array(n);
-  for (let k = 0; k < n; k++) { r[k] = y[k] - senSlope * x[k]; mean += r[k]; }
+  for (let k = 0; k < n; k++) {
+    syy += (y[k] - ym) ** 2;
+    r[k] = y[k] - ym - senSlope * (x[k] - xm);
+    mean += r[k];
+  }
   mean /= n;
   let num = 0, den = 0;
   for (let k = 0; k < n; k++) {
@@ -256,7 +265,7 @@ export function mannKendall(annual) {
     den += d * d;
     if (k + 1 < n) num += d * (r[k + 1] - mean);
   }
-  const r1 = den > 0 ? num / den : 0;
+  const r1 = den > 1e-12 * syy && den > 0 ? num / den : 0;
   let cf = 1;
   if (r1 > 0) {
     const rho = Math.min(r1, 0.99);

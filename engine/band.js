@@ -3,7 +3,7 @@
 // shifting, expanding, or contracting. Pure, no DOM.
 
 import { annualFields } from "./fields.js";
-import { regionCells, rowAreasKm2, latOf, lonOf, lonInRange, KM_PER_DEG_LAT } from "./grid.js";
+import { regionCells, rowAreasKm2, latOf, lonOf, lonInRange, thresholdBounds, KM_PER_DEG_LAT } from "./grid.js";
 import { linearTrend, mannKendall, significanceLevel, fmt, fmtP, MIN_YEARS } from "./stats.js";
 
 // bandTrack(v, { min, max, months, region, hemisphere })
@@ -33,6 +33,15 @@ import { linearTrend, mannKendall, significanceLevel, fmt, fmtP, MIN_YEARS } fro
 // Which case applies is decided from the data: whichever edge is found more
 // often over all years and columns, or "strip" when both are found in
 // comparable numbers. `edgeKind` and `bandShape` report the choice.
+// For a band on one side, the edge comes from the run of in-band cells that
+// touches that side of the column (the open water that starts at the
+// equator end), not from a separate patch further on, so a polynya or a cold
+// mountain range cannot take over the edge. A column whose home side is not
+// in the band falls back to its longest run.
+//
+// Thresholds are inclusive with a 1e-6 relative tolerance for Float32
+// round-off. A year whose region has less than 90% of the data coverage of
+// the best-covered year gets NaN area and centroid instead of a fake drop.
 export function bandTrack(v, opts = {}) {
   const { min = null, max = null, months, region = null } = opts;
   const grid = v.entry.grid;
@@ -43,7 +52,7 @@ export function bandTrack(v, opts = {}) {
   const inRegion = new Uint8Array(ncell);
   for (const c of regionCells(grid, region).cells) inRegion[c] = 1;
   const areas = rowAreasKm2(grid);
-  const lo = min ?? -Infinity, hi = max ?? Infinity;
+  const { lo, hi } = thresholdBounds(min, max);
   const inBand = (val) => val === val && val >= lo && val <= hi;
 
   const hemisphere = opts.hemisphere ?? defaultHemisphere(grid, region);
@@ -70,6 +79,9 @@ export function bandTrack(v, opts = {}) {
   const centroidLon = new Array(ny);
   const eqEdge = new Array(ny);
   const poEdge = new Array(ny);
+  const eqAnchored = new Array(ny);
+  const poAnchored = new Array(ny);
+  const validKm2 = new Array(ny);
   let nEq = 0, nPo = 0;
 
   const rad = Math.PI / 180;
@@ -77,7 +89,7 @@ export function bandTrack(v, opts = {}) {
   const colVal = new Float64Array(scanRows.length);
 
   const crossing = (inLat, inVal, outLat, outVal) => {
-    const th = outVal > hi ? hi : lo;
+    const th = outVal > hi ? max : min;
     let f = (th - inVal) / (outVal - inVal);
     if (!(f >= 0)) f = 0; else if (f > 1) f = 1;
     return inLat + f * (outLat - inLat);
@@ -85,12 +97,15 @@ export function bandTrack(v, opts = {}) {
 
   for (let y = 0; y < ny; y++) {
     const base = y * ncell;
-    let area = 0, sLat = 0, sx = 0, sy = 0;
+    let area = 0, valid = 0, sLat = 0, sx = 0, sy = 0;
     for (let i = 0; i < nlat; i++) {
       const lat = latOf(grid, i), a = areas[i];
       for (let j = 0; j < nlon; j++) {
         const c = i * nlon + j;
-        if (!inRegion[c] || !inBand(fields[base + c])) continue;
+        if (!inRegion[c]) continue;
+        const val = fields[base + c];
+        if (val === val) valid += a;
+        if (!inBand(val)) continue;
         area += a;
         sLat += a * lat;
         const lon = lonOf(grid, j) * rad;
@@ -99,11 +114,14 @@ export function bandTrack(v, opts = {}) {
       }
     }
     areaKm2[y] = area;
+    validKm2[y] = valid;
     centroidLat[y] = area > 0 ? sLat / area : NaN;
     centroidLon[y] = area > 0 ? Math.atan2(sy, sx) / rad : NaN;
 
     const eq = new Array(nlon).fill(NaN);
     const po = new Array(nlon).fill(NaN);
+    const eqA = new Array(nlon).fill(NaN);
+    const poA = new Array(nlon).fill(NaN);
     for (let j = 0; j < nlon; j++) {
       if (!activeCol[j]) continue;
       let m = 0;
@@ -127,9 +145,36 @@ export function bandTrack(v, opts = {}) {
       const s = bestStart, e = bestStart + bestLen - 1;
       if (s > 0) { eq[j] = crossing(colLat[s], colVal[s], colLat[s - 1], colVal[s - 1]); nEq++; }
       if (e < m - 1) { po[j] = crossing(colLat[e], colVal[e], colLat[e + 1], colVal[e + 1]); nPo++; }
+      // Runs anchored on the band's home side: the run that starts at the
+      // equator end of the column, and the run that ends at the pole end.
+      // A band that sits on one side is traced from that side, so a separate
+      // patch (a polynya, a mountain range) never takes over its edge.
+      // Without an anchored run, the longest run's edge is used.
+      if (inBand(colVal[0])) {
+        let ae = 0;
+        while (ae + 1 < m && inBand(colVal[ae + 1])) ae++;
+        if (ae < m - 1) poA[j] = crossing(colLat[ae], colVal[ae], colLat[ae + 1], colVal[ae + 1]);
+      } else poA[j] = po[j];
+      if (inBand(colVal[m - 1])) {
+        let as = m - 1;
+        while (as > 0 && inBand(colVal[as - 1])) as--;
+        if (as > 0) eqA[j] = crossing(colLat[as], colVal[as], colLat[as - 1], colVal[as - 1]);
+      } else eqA[j] = eq[j];
     }
     eqEdge[y] = eq;
     poEdge[y] = po;
+    eqAnchored[y] = eqA;
+    poAnchored[y] = poA;
+  }
+
+  // A year whose region is much less covered by data than the best-covered
+  // year cannot be compared on area: its area and centroid are NaN rather
+  // than a fake drop.
+  const bestValid = Math.max(0, ...validKm2);
+  for (let y = 0; y < ny; y++) {
+    if (!(validKm2[y] >= 0.9 * bestValid) || bestValid === 0) {
+      areaKm2[y] = NaN; centroidLat[y] = NaN; centroidLon[y] = NaN;
+    }
   }
 
   let bandShape, edgeKind, edgeLat;
@@ -138,9 +183,13 @@ export function bandTrack(v, opts = {}) {
   } else if (Math.min(nEq, nPo) >= 0.5 * Math.max(nEq, nPo)) {
     bandShape = "strip"; edgeKind = "poleward"; edgeLat = poEdge;
   } else if (nEq > nPo) {
-    bandShape = "poleward"; edgeKind = "equatorward"; edgeLat = eqEdge;
+    bandShape = "poleward"; edgeKind = "equatorward";
+    for (let y = 0; y < ny; y++) eqEdge[y] = eqAnchored[y];
+    edgeLat = eqEdge;
   } else {
-    bandShape = "equatorward"; edgeKind = "poleward"; edgeLat = poEdge;
+    bandShape = "equatorward"; edgeKind = "poleward";
+    for (let y = 0; y < ny; y++) poEdge[y] = poAnchored[y];
+    edgeLat = poEdge;
   }
 
   const maskCache = new Map();
@@ -269,7 +318,8 @@ export function bandSummary(track) {
     edgeMeanLat: new Array(ny).fill(NaN),
   };
 
-  const meanArea = track.areaKm2.reduce((s, a) => s + a, 0) / Math.max(1, ny);
+  const finiteAreas = track.areaKm2.filter(Number.isFinite);
+  const meanArea = finiteAreas.reduce((s, a) => s + a, 0) / Math.max(1, finiteAreas.length);
   if (ny < MIN_YEARS) {
     out.sentence = `There are not enough years with data to follow this band (found ${ny}, need at least ${MIN_YEARS}).`;
     return out;

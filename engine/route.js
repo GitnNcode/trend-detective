@@ -1,6 +1,6 @@
 // Route mode: how many months a year a shipping route is open. Pure, no DOM.
 
-import { normLon, latOf, lonOf } from "./grid.js";
+import { normLon, latOf, lonOf, lonIndex, thresholdBounds } from "./grid.js";
 import { parseMonth, monthOfIndex, seasonPlan } from "./time.js";
 
 const rad = Math.PI / 180;
@@ -8,11 +8,8 @@ const rad = Math.PI / 180;
 function cellOf(grid, lat, lon) {
   const i = Math.round((lat - grid.lat0) / grid.dlat);
   if (i < 0 || i >= grid.nlat) return null;
-  const off = ((((lon - grid.lon0) % 360) + 360) % 360) / grid.dlon;
-  const j = Math.round(off) % grid.nlon;
-  // Grids that do not wrap all the way round (regional) can miss a longitude.
-  if (grid.nlon * grid.dlon < 359.999 && off > grid.nlon - 0.5) return null;
-  return { i, j };
+  const j = lonIndex(grid, lon);
+  return j < 0 ? null : { i, j };
 }
 
 function slerp(a, b, f) {
@@ -86,6 +83,7 @@ export function sampleCells(route, grid, { greatCircle = route?.greatCircle ?? f
 //                      -1 if the route was never blocked or has no samples
 export function routeOpen(v, route, opts = {}) {
   const max = opts.max ?? 0.15;
+  const { hi } = thresholdBounds(null, max);
   const { entry } = v;
   const cells = sampleCells(route, entry.grid, opts);
   const plan = seasonPlan(opts.months);
@@ -101,7 +99,7 @@ export function routeOpen(v, route, opts = {}) {
       const val = v.value(t, cells[k].i, cells[k].j);
       if (val !== val) continue;
       valid++;
-      if (val > max) { open = false; blockCount[k]++; }
+      if (val > hi) { open = false; blockCount[k]++; }
     }
     if (valid === 0) open = false;
     const sy = year + plan.yearShift[month];
