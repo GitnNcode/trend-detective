@@ -1,0 +1,10 @@
+{
+  "name": "trend-detective-engine",
+  "private": true,
+  "type": "module",
+  "description": "Pure statistics engine for Trend Detective. No dependencies, no DOM.",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "bench": "node bench.js"
+  }
+}
