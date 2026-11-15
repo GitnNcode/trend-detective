@@ -16,6 +16,10 @@ export const RAMPS = {
   snow: ["#1c1c1c", "#33415e", "#4f6c9a", "#7d9ccb", "#adc6e8", "#dbe7f7", "#ffffff"],
   runoff: ["#1c1c1c", "#1c3550", "#1f5585", "#2f7fbf", "#4fa8e0", "#8fd0f0", "#d0f0ff"],
   speed: ["#262626", "#4b2991", "#2a4fb0", "#1f8fd0", "#2fbfa0", "#7fd34e", "#d8e23a", "#f9a825", "#f4511e", "#c62828"],
+  // Aerosol optical depth: clean (pale) to hazy (dark brown)
+  aerosol: ["#f7f4e6", "#efe3ad", "#e8c662", "#dc9a33", "#bf6522", "#8e3a1a", "#561f12"],
+  // Signed wind component: easterly blue, westerly red
+  uwind: ["#2c4f9e", "#4f7fcc", "#94b8e6", "#eef1f4", "#f2b98f", "#dc6f45", "#a8331c"],
   // ColorBrewer RdBu (reversed): falling blue, rising red
   heat: ["#053061", "#2166ac", "#4393c3", "#92c5de", "#d1e5f0", "#f7f7f7", "#fddbc7", "#f4a582", "#d6604d", "#b2182b", "#67001f"],
   // ColorBrewer BrBG: drying brown, wetting teal
@@ -44,6 +48,9 @@ export const VARS = {
   soilwet: { code: "GWETROOT", ramp: "soil", domain: [0.1, 1], levels: 9, trend: "wet", short: "Soil wetness", band: { min: null, max: 0.3 }, step: 0.01 },
   snow: { code: "SNOMAS", ramp: "snow", domain: [0, 500], levels: 10, gamma: 0.5, trend: "ice", short: "Snow mass", band: { min: 10, max: null }, step: 1 },
   runoff: { code: "RUNOFF", ramp: "runoff", domain: [0, 6], levels: 12, gamma: 0.5, trend: "wet", short: "Runoff", band: { min: 1, max: null }, step: 0.1 },
+  aod: { code: "AOD", ramp: "aerosol", domain: [0, 1], levels: 10, gamma: 0.6, trend: "heat", short: "Aerosol haze", band: { min: 0.3, max: null }, step: 0.01 },
+  u250: { code: "U250", ramp: "uwind", domain: [-40, 40], levels: 16, trend: "heat", short: "East wind 250", band: { min: 20, max: null }, step: 1, hidden: true },
+  v250: { code: "V250", ramp: "uwind", domain: [-25, 25], levels: 10, trend: "heat", short: "North wind 250", band: { min: 5, max: null }, step: 1, hidden: true },
 };
 
 export function varStyle(id) {

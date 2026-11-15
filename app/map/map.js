@@ -142,6 +142,7 @@ export class MapView {
   setRamps({ rings, zone }) { if (rings) this.gl.setLUT("ringRamp", rings); if (zone) this.gl.setLUT("zoneRamp", zone); }
   setScene(scene) { this.scene = { ...scene }; this.requestRender(); }
   setOverlay(ov) { this.overlay = { ...ov }; this.baseDirty = true; this.requestRender(); }
+  setVectors(vec) { this.overlay = { ...this.overlay, vectors: vec }; this.baseDirty = true; this.requestRender(); }
   setOptions(o) { this.options = { ...this.options, ...o }; this.baseDirty = true; this.requestRender(); }
   setTime(t) { this.t = clamp(t, 0, Math.max(0, this.layers - 1)); this.requestRender(); }
   requestRender() { this.dirty = true; }
@@ -417,14 +418,15 @@ export class MapView {
     }
   }
 
+  // Arrows on a regular screen grid: white with a thin dark casing, length
+  // by speed (linear for winds, logarithmic for climate velocity).
   _drawVectors(ctx, p, f) {
     const V = this.overlay.vectors;
-    const g = V.grid, sp = 26;
+    const g = V.grid, sp = 27;
+    const lin = V.scale === "linear";
     const s0 = V.s0 || 1, lc = Math.log(1 + (V.cap || s0 * 20) / s0);
-    ctx.strokeStyle = "#000";
-    ctx.fillStyle = "#000";
-    ctx.lineWidth = 1;
     const pole = [0, this.polarSouth ? -90 : 90];
+    const segs = [];
     for (let y = f.y0 + sp / 2; y < f.y1; y += sp) {
       for (let x = f.x0 + sp / 2; x < f.x1; x += sp) {
         const inv = p.invert([x, y]);
@@ -437,27 +439,35 @@ export class MapView {
         if (!smp) continue;
         const mag = Math.hypot(smp.u, smp.v);
         if (!(mag > 0)) continue;
-        const t = Math.min(1, Math.log(1 + smp.s / s0) / lc);
-        const len = 4 + 15 * t;
+        const t = lin ? Math.min(1, mag / (V.max || 50)) : Math.min(1, Math.log(1 + smp.s / s0) / lc);
+        if (lin && t < 0.04) continue;
+        const len = lin ? 3 + 19 * t : 4 + 16 * t;
         const d = 0.5 / Math.max(0.2, Math.cos(ll.lat * RAD));
         const q = p([ll.lon + (smp.u / mag) * d, ll.lat + (smp.v / mag) * 0.5]);
         if (!q) continue;
         let ux = q[0] - x, uy = q[1] - y;
         const n = Math.hypot(ux, uy) || 1;
         ux /= n; uy /= n;
-        const x1 = x - ux * len / 2, y1 = y - uy * len / 2, x2 = x + ux * len / 2, y2 = y + uy * len / 2;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x2, y2);
-        ctx.lineTo(x2 - ux * 4 - uy * 2.4, y2 - uy * 4 + ux * 2.4);
-        ctx.lineTo(x2 - ux * 4 + uy * 2.4, y2 - uy * 4 - ux * 2.4);
-        ctx.closePath();
-        ctx.fill();
+        segs.push([x - (ux * len) / 2, y - (uy * len) / 2, x + (ux * len) / 2, y + (uy * len) / 2, ux, uy]);
       }
     }
+    const pass = (color, lw, head) => {
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      for (const [x1, y1, x2, y2] of segs) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); }
+      ctx.stroke();
+      ctx.beginPath();
+      for (const [, , x2, y2, ux, uy] of segs) {
+        ctx.moveTo(x2 + ux * head * 0.4, y2 + uy * head * 0.4);
+        ctx.lineTo(x2 - ux * head - uy * head * 0.62, y2 - uy * head + ux * head * 0.62);
+        ctx.lineTo(x2 - ux * head + uy * head * 0.62, y2 - uy * head - ux * head * 0.62);
+        ctx.closePath();
+      }
+      ctx.fill();
+    };
+    pass("rgba(0,0,0,0.55)", 2.8, 5.2);
+    pass(V.color ?? "#ffffff", 1.3, 4.2);
   }
 
   _drawOverlay(p) {

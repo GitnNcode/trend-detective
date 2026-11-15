@@ -26,6 +26,7 @@ SOURCE = {
     "t2m": "T2M", "t500": "T500", "wind250": "speed from monthly-mean U250 and V250",
     "tqv": "TQV", "precip": "PRECTOTCORR", "evap": "EVAP", "seaice": "FRSEAICE / FROCEAN, land masked",
     "soilwet": "GWETROOT", "snow": "SNOMAS", "runoff": "RUNOFF",
+    "u250": "U250 (eastward wind)", "v250": "V250 (northward wind)", "aod": "TOTEXTTAU (total aerosol extinction AOT, 550 nm)",
 }
 
 

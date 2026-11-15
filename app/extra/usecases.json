@@ -337,5 +337,118 @@
       12
     ],
     "mode": "atlas"
+  },
+  {
+    "prompt": "Is the air over northern China's cities getting cleaner?",
+    "variable": "aod",
+    "region": "north_china_plain",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "series"
+  },
+  {
+    "prompt": "Is the haze over northern India getting thicker?",
+    "variable": "aod",
+    "region": "indo_gangetic",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "series"
+  },
+  {
+    "prompt": "Where is the air getting cleaner, and where hazier?",
+    "variable": "aod",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "map"
+  },
+  {
+    "prompt": "How does the winter jet stream wander from month to month?",
+    "variable": "wind250",
+    "region": "natlantic",
+    "months": [
+      12,
+      1,
+      2
+    ],
+    "mode": "vectors",
+    "vecSource": "wind"
+  },
+  {
+    "prompt": "Has the speed of climate change itself changed over time?",
+    "variable": "t2m",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "vectors",
+    "vecSource": "velocity"
+  },
+  {
+    "prompt": "Do independent records agree with MERRA-2?",
+    "variable": "t2m",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "validate"
   }
 ]

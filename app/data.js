@@ -44,12 +44,12 @@ export async function loadContent() {
   const extra = async (n, fallback) => {
     try { return await json(EXTRA_BASE + n + ".json"); } catch { return fallback; }
   };
-  const [xUse, xCases, xRegions, cities] = await Promise.all([
-    extra("usecases", []), extra("cases", []), extra("regions", []), extra("cities", []),
+  const [xUse, xCases, xRegions, cities, xDefs] = await Promise.all([
+    extra("usecases", []), extra("cases", []), extra("regions", []), extra("cities", []), extra("definitions", {}),
   ]);
   const regionIds = new Set(regions.map((r) => r.id));
   return {
-    definitions,
+    definitions: { ...xDefs, ...definitions },
     regions: [...regions, ...xRegions.filter((r) => !regionIds.has(r.id))],
     usecases: [...usecases.map((u) => ({ ...u, source: "lane4" })), ...xUse.map((u) => ({ ...u, source: "app", isNew: true }))],
     routes,

@@ -97,5 +97,14 @@
     "latMax": 25,
     "lonMin": -20,
     "lonMax": 40
+  },
+  {
+    "id": "indo_gangetic",
+    "name": "Indo-Gangetic Plain (Delhi to Kolkata)",
+    "type": "city air",
+    "latMin": 22,
+    "latMax": 32,
+    "lonMin": 72,
+    "lonMax": 90
   }
 ]

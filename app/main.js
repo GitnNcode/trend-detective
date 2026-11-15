@@ -21,6 +21,8 @@ export const MODES = [
   { id: "route", label: "Sea-ice route", short: "ROUTE" },
   { id: "lineup", label: "Field lineup", short: "LINEUP" },
   { id: "atlas", label: "Trend atlas", short: "ATLAS" },
+  { id: "vectors", label: "Vector loop", short: "VECTORS" },
+  { id: "validate", label: "Validation", short: "CHECK" },
 ];
 
 const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -31,6 +33,7 @@ const DEFAULTS = {
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
   twin: null, prompt: null, cells: false, contours: true, coast: true, grid: true, hatch: true, showMonthly: false,
+  vecSource: "velocity", vecWindow: 15,
 };
 
 export const app = {
@@ -72,6 +75,9 @@ function memo(key, fn) {
 const mkey = (s) => [...s.months].sort((a, b) => a - b).join(".");
 const rkey = (r) => `${r.latMin},${r.latMax},${r.lonMin},${r.lonMax}`;
 export const defOf = (id) => app.content.definitions[id] ?? { name: id, plain: "", why: "" };
+export const hasVar = (id) => !!D.entryOf(id);
+// The field shown on the map: the vector loop's wind source always shows wind speed.
+export const fieldVar = (s = app.state) => (s.mode === "vectors" && s.vecSource === "wind" && hasVar("u250") && hasVar("v250") ? "wind250" : s.variable);
 export const unitsOf = (id) => D.entryOf(id)?.units ?? "";
 
 // ---------- loading ----------
@@ -153,6 +159,7 @@ export function setTime(t) {
     app.map.overlay.track.current = Math.max(0, Math.min(app.R.track.years.length - 1, yi));
     app.map.requestRender();
   }
+  vectorFrame();
   W.updateFrame();
 }
 
@@ -217,15 +224,17 @@ export async function update(changed = []) {
       }
     }
 
-    const v = (await ensureVars([s.variable]))[0];
+    const vid = fieldVar(s);
+    if (s.mode === "vectors" && s.vecSource === "velocity" && s.cadence === "monthly") { app.set({ cadence: "annual" }); return; }
+    const v = (await ensureVars([vid]))[0];
     if (my !== token) return;
     ensureField(v);
 
-    const R = { v, region };
+    const R = { v, region, vid };
     const months = s.months, units = v.entry.units, A = app.A;
-    const rs = memo(`rs|${s.variable}|${rkey(region)}`, () => E.regionSeries(v, region));
-    const ds = memo(`ds|${s.variable}|${rkey(region)}`, () => E.deseasonalize(rs));
-    const annual = memo(`an|${s.variable}|${rkey(region)}|${mkey(s)}|${s.deseason}`, () => E.annualMeans(s.deseason && months.length < 12 ? ds : rs, months));
+    const rs = memo(`rs|${vid}|${rkey(region)}`, () => E.regionSeries(v, region));
+    const ds = memo(`ds|${vid}|${rkey(region)}`, () => E.deseasonalize(rs));
+    const annual = memo(`an|${vid}|${rkey(region)}|${mkey(s)}|${s.deseason}`, () => E.annualMeans(s.deseason && months.length < 12 ? ds : rs, months));
     R.rs = rs; R.ds = ds; R.annual = annual;
     R.trend = E.linearTrend(annual);
     R.mk = E.mannKendall(annual);
@@ -266,6 +275,27 @@ export async function update(changed = []) {
         R.flowLand = memo(`vfl|${s.variable}|${mkey(s)}`, () => ({ medianKmPerDecade: A.velocitySummary(R.flow, null, { mask: land }).medianKmPerDecade }));
       }
     }
+    if (s.mode === "vectors" && A) {
+      if (vid === "wind250") {
+        const [u, w] = await ensureVars(["u250", "v250"]);
+        if (my !== token) return;
+        R.vec = { kind: "wind", u, w, uaf: E.annualFields(u, months), waf: E.annualFields(w, months) };
+        R.vecKind = "wind";
+        R.vecSummary = memo(`vw|${rkey(region)}|${mkey(s)}`, () => meanWind(R.vec, region));
+      } else {
+        R.vec = { kind: "velocity", series: memo(`vs|${vid}|${mkey(s)}|${s.vecWindow}`, () => A.velocitySeries(v, months, { window: s.vecWindow })) };
+        R.vecKind = "velocity";
+        R.vecWindow = `${R.vec.series.window}-year windows`;
+        const full = memo(`vf|${vid}|${mkey(s)}`, () => A.velocityField(v, months));
+        R.vecSummary = A.velocitySummary(full, region);
+      }
+    }
+    if (s.mode === "validate") {
+      const [t2m, ice] = await ensureVars(["t2m", "seaice"]);
+      if (my !== token) return;
+      R.validation = await memoAsync("validation", () => computeValidation(t2m, ice));
+      if (my !== token) return;
+    }
     if (s.mode === "twin" && A) {
       const [t2m, precip, soil] = await ensureVars(["t2m", "precip", "soilwet"]);
       if (my !== token) return;
@@ -294,6 +324,106 @@ export async function update(changed = []) {
     console.error(err);
     hideLoader();
     W.toast(`Error: ${err.message}`);
+  }
+}
+
+const asyncMemo = new Map();
+function memoAsync(key, fn) {
+  if (!asyncMemo.has(key)) asyncMemo.set(key, fn().catch((e) => { asyncMemo.delete(key); throw e; }));
+  return asyncMemo.get(key);
+}
+
+// Long-term mean wind vector over a region (area weighted), for the inspector.
+function meanWind(vec, region) {
+  const g = vec.u.entry.grid, { cells, rows } = E.regionCells(g, region), areas = E.rowAreasKm2(g);
+  const { fields: uf, ncell } = vec.uaf, wf = vec.waf.fields, ny = vec.uaf.years.length;
+  let su = 0, sw = 0, ss = 0, wt = 0;
+  for (let y = 0; y < ny; y++) {
+    for (let k = 0; k < cells.length; k++) {
+      const c = cells[k], uu = uf[y * ncell + c], vv = wf[y * ncell + c], a = areas[rows[k]];
+      if (uu === uu && vv === vv) { su += a * uu; sw += a * vv; ss += a * Math.hypot(uu, vv); wt += a; }
+    }
+  }
+  const mu = su / wt, mv = sw / wt;
+  const bearingDeg = (Math.atan2(mu, mv) * 180 / Math.PI + 360) % 360;
+  return { meanSpeed: ss / wt, bearingDeg, bearingName: app.A?.bearingName ? app.A.bearingName(bearingDeg) : "", medianKmPerDecade: NaN };
+}
+
+// Cross-check MERRA-2 against independent records: NASA GISTEMP v4 global
+// temperature and the NSIDC Sea Ice Index September extent.
+async function computeValidation(t2m, ice) {
+  const [gtxt, ntxt] = await Promise.all(["GLB.Ts+dSST.csv", "N_09_extent.csv"].map((f) => fetch(D.DATA_BASE + "validation/" + f).then((r) => { if (!r.ok) throw new Error("validation data missing"); return r.text(); })));
+  const gis = new Map();
+  for (const line of gtxt.split(/\r?\n/)) {
+    const c = line.split(",");
+    if (!/^\d{4}$/.test(c[0])) continue;
+    const jd = Number(c[13]);
+    if (Number.isFinite(jd) && c[13] !== "***") gis.set(Number(c[0]), jd);
+  }
+  const nsidc = new Map();
+  for (const line of ntxt.split(/\r?\n/)) {
+    const c = line.split(",").map((x) => x.trim());
+    if (!/^\d{4}$/.test(c[0])) continue;
+    const ext = Number(c[4]);
+    if (Number.isFinite(ext) && ext > 0) nsidc.set(Number(c[0]), ext);
+  }
+  const globe = { latMin: -90, latMax: 90, lonMin: -180, lonMax: 180 };
+  const ours = E.annualMeans(E.regionSeries(t2m, globe), ALL_MONTHS);
+  const years = ours.years.filter((y) => gis.has(y));
+  const base = (ys, vals) => { const sel = ys.map((y, k) => (y >= 1981 && y <= 2010 ? vals[k] : NaN)).filter(Number.isFinite); return sel.reduce((a, b) => a + b, 0) / sel.length; };
+  const oursVals = years.map((y) => ours.values[ours.years.indexOf(y)]);
+  const refVals = years.map((y) => gis.get(y));
+  const ob = base(years, oursVals), rb = base(years, refVals);
+  const oursAnom = oursVals.map((x) => x - ob), refAnom = refVals.map((x) => x - rb);
+  const slopeOf = (ys, vals) => E.linearTrend({ years: ys, values: Float64Array.from(vals) });
+  const track = E.bandTrack(ice, { min: 0.15, max: null, months: [9], region: { latMin: 50, latMax: 90, lonMin: -180, lonMax: 180 } });
+  const iy = track.years.filter((y) => nsidc.has(y) && y <= 2025);
+  const io = iy.map((y) => track.areaKm2[track.years.indexOf(y)] / 1e6), ir = iy.map((y) => nsidc.get(y));
+  const iob = base(iy, io), irb = base(iy, ir);
+  const to = slopeOf(years, oursAnom), tr = slopeOf(years, refAnom), so = slopeOf(iy, io), sr = slopeOf(iy, ir);
+  return {
+    t2m: { years, oursAnom, refAnom, ours: to.slope * 10, ref: tr.slope * 10, oursP: to.p, refP: tr.p, r: pearson(oursAnom, refAnom) },
+    ice: { years: iy, ours: io, ref: ir, oursPct: (so.slope * 10 * 100) / iob, refPct: (sr.slope * 10 * 100) / irb, oursAbs: so.slope * 10, refAbs: sr.slope * 10, r: pearson(io, ir) },
+  };
+}
+
+function pearson(a, b) {
+  const n = a.length, ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+  let sab = 0, saa = 0, sbb = 0;
+  for (let k = 0; k < n; k++) { const da = a[k] - ma, db = b[k] - mb; sab += da * db; saa += da * da; sbb += db * db; }
+  return sab / Math.sqrt(saa * sbb);
+}
+
+// Push the current frame's vectors (and, for climate velocity, its speed shading) to the map.
+export function vectorFrame() {
+  const s = app.state, R = app.R;
+  if (s.mode !== "vectors" || !R.vec || !app.frames) return;
+  const k = Math.max(0, Math.min(app.frames.n - 1, Math.round(app.t)));
+  const g = R.v.entry.grid, ncell = g.nlat * g.nlon;
+  if (R.vec.kind === "velocity") {
+    const S = R.vec.series, fr = S.frames[Math.min(k, S.frames.length - 1)];
+    const s0 = S.medianSpeed || 1, cap = S.cap || 1, lc = Math.log(1 + cap / s0);
+    const aux = new Float32Array(ncell * 4);
+    for (let c = 0; c < ncell; c++) if (Number.isFinite(fr.speed[c])) { aux[4 * c] = Math.min(1, Math.log(1 + fr.speed[c] / s0) / lc); aux[4 * c + 1] = 1; }
+    app.map.setAux(aux, g, { lut: rampLUT("speed"), levels: 10 });
+    app.map.setVectors({ u: fr.u, v: fr.v, speed: fr.speed, grid: g, scale: "log", s0, cap });
+    R.vecLabel = `${fr.window[0]}–${fr.window[1]}`;
+  } else {
+    let u, w;
+    if (app.frames.monthly) {
+      const slice = (V) => {
+        const out = new Float32Array(ncell), sc = V.entry.scale ?? 1, of = V.entry.offset ?? 0, d = V.data;
+        for (let c = 0; c < ncell; c++) { const r = d[k * ncell + c]; out[c] = r === E.MISSING ? NaN : r * sc + of; }
+        return out;
+      };
+      u = slice(R.vec.u); w = slice(R.vec.w);
+    } else {
+      u = R.vec.uaf.fields.subarray(k * ncell, (k + 1) * ncell);
+      w = R.vec.waf.fields.subarray(k * ncell, (k + 1) * ncell);
+    }
+    const speed = new Float32Array(ncell);
+    for (let c = 0; c < ncell; c++) speed[c] = Math.hypot(u[c], w[c]);
+    app.map.setVectors({ u, v: w, speed, grid: g, scale: "linear", max: 55 });
   }
 }
 
@@ -414,6 +544,10 @@ export function applyScene() {
     scene.layer = 2;
     ov.vectors = { u: R.flow.u, v: R.flow.v, speed: R.flow.speed, grid: R.v.entry.grid, s0, cap };
   }
+  if (s.mode === "vectors" && R.vec) {
+    scene.layer = R.vec.kind === "velocity" ? 2 : 0;
+    scene.region = null; ov.region = global ? null : region;
+  }
   if (s.mode === "twin" && R.twin) {
     const t2m = D.cachedVar("t2m");
     if (t2m && R.tmapT2m) {
@@ -446,6 +580,11 @@ export const actions = {
     if (mode === "flow" && s.variable === "seaice") patch.variable = "t2m";
     if (mode === "map") patch.layerView = "trend";
     if (mode === "atlas") Object.assign(patch, { regionId: "global", custom: null });
+    if (mode === "validate") Object.assign(patch, { regionId: "global", custom: null, months: ALL_MONTHS });
+    if (mode === "vectors") {
+      if (s.vecSource === "wind" && hasVar("u250")) Object.assign(patch, { variable: "wind250" });
+      else Object.assign(patch, { vecSource: "velocity", cadence: "annual", variable: s.variable === "seaice" ? "t2m" : s.variable });
+    }
     app.set(patch);
   },
   setVariable(id) {
@@ -469,6 +608,8 @@ export const actions = {
     };
     if (a.band) patch.band = a.band; else if (patch.mode === "band") patch.band = varStyle(patch.variable).band;
     if (a.mode === "route") patch.route = a.route ?? "nsr";
+    if (a.vecSource) patch.vecSource = a.vecSource;
+    if (a.mode === "vectors" && a.vecSource === "wind") patch.variable = "wind250";
     if (a.twin) patch.twin = a.twin;
     patch.layerView = a.layerView ?? (patch.mode === "map" ? "trend" : app.state.layerView);
     patch.showRings = !!a.showRings;
@@ -490,6 +631,9 @@ async function boot() {
   app.map.loadBasemap();
   const [catalog, content] = await Promise.all([D.loadCatalog(), D.loadContent()]);
   app.catalog = catalog;
+  const ok = (id) => !id || catalog.variables.some((v) => v.id === id);
+  content.usecases = content.usecases.filter((u) => ok(u.variable) && (u.vecSource !== "wind" || (ok("u250") && ok("v250"))));
+  content.cases = content.cases.filter((c) => c.steps.every((st) => ok(st.action.variable)));
   app.content = content;
   app.S = createStore({ ...DEFAULTS, ...fromHash() });
   document.getElementById("app").dataset.mode = app.state.mode;
@@ -517,7 +661,7 @@ function bindKeys() {
     else if (e.key === "ArrowLeft") { setPlaying(false); setTime(Math.round(app.t) - 1); }
     else if (e.key === "Escape") { document.getElementById("aboutModal").hidden = true; app.map.drawMode = false; }
     else if (e.key === "b" || e.key === "B") { app.map.drawMode = true; W.toast("Drag a box on the map"); }
-    else if (/^[1-8]$/.test(e.key)) actions.setMode(MODES[Number(e.key) - 1].id);
+    else if (/^[0-9]$/.test(e.key)) { const m = MODES[(Number(e.key) + 9) % 10]; if (m) actions.setMode(m.id); }
   });
 }
 

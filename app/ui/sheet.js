@@ -14,10 +14,11 @@ const FONT = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Ari
 export function renderSheet(app) {
   const el = document.getElementById("sheet");
   const s = app.state, R = app.R;
-  if (!["lineup", "atlas"].includes(s.mode)) { el.hidden = true; el.innerHTML = ""; el.dataset.key = ""; return; }
+  if (!["lineup", "atlas", "validate"].includes(s.mode)) { el.hidden = true; el.innerHTML = ""; el.dataset.key = ""; return; }
   el.hidden = false;
   if (s.mode === "lineup" && R.lineup) lineup(app, el);
   if (s.mode === "atlas" && R.atlas) atlas(app, el);
+  if (s.mode === "validate" && R.validation) validation(app, el);
 }
 
 function lineup(app, el) {
@@ -171,4 +172,67 @@ function drawAtlas(app, el, it, k) {
   const { factor, label } = E.displayUnits(unitsOf(it.id));
   const sc = el.querySelector(`[data-scale="${k}"]`);
   if (sc) sc.textContent = `±${fmtNum(mx * 10 * factor, 2)} ${label}/dec`;
+}
+
+// Validation figure: MERRA-2 against independent records, two panels.
+function validation(app, el) {
+  if (el.dataset.key === "validate") return;
+  el.dataset.key = "validate";
+  const V = app.R.validation;
+  el.innerHTML = `<div class="panels two">
+      <div class="pnl static"><div class="pt"><span>Global mean temperature anomaly (°C, vs 1981–2010)</span><span class="v">r = ${fmtNum(V.t2m.r, 2)}</span></div><canvas data-v="t"></canvas>
+        <div class="vleg"><i style="background:#111"></i>MERRA-2 ${signed(V.t2m.ours, 3)} °C/dec<i style="background:#d62728"></i>NASA GISTEMP v4 ${signed(V.t2m.ref, 3)} °C/dec</div></div>
+      <div class="pnl static"><div class="pt"><span>September Arctic sea-ice extent (million km²)</span><span class="v">r = ${fmtNum(V.ice.r, 2)}</span></div><canvas data-v="i"></canvas>
+        <div class="vleg"><i style="background:#111"></i>MERRA-2 ${signed(V.ice.oursPct, 3)} %/dec<i style="background:#1f77b4"></i>NSIDC Sea Ice Index ${signed(V.ice.refPct, 3)} %/dec</div></div>
+    </div>
+    <p class="sheet-note">MERRA-2 is a reanalysis; GISTEMP is built from station and ship thermometers, and the Sea Ice Index from passive-microwave satellites. Lines are yearly values (September for sea ice); dashed lines are least-squares trends. MERRA-2 extent counts grid cells with at least 15% ice on a 1° grid north of 50°N.</p>`;
+  requestAnimationFrame(() => {
+    pairPlot(el.querySelector('[data-v="t"]'), V.t2m.years, V.t2m.oursAnom, V.t2m.refAnom, "#d62728");
+    pairPlot(el.querySelector('[data-v="i"]'), V.ice.years, V.ice.ours, V.ice.ref, "#1f77b4");
+  });
+}
+
+function pairPlot(cv, years, a, b, colorB) {
+  if (!cv) return;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const W = cv.clientWidth || 400, H = Math.max(220, Math.round(W * 0.55));
+  cv.style.height = H + "px";
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  const all = [...a, ...b].filter(Number.isFinite);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const L = 44, R = W - 10, T = 10, B = H - 24;
+  const x = (y) => L + ((y - years[0]) / (years.at(-1) - years[0])) * (R - L);
+  const yv = (v) => B - ((v - lo) / (hi - lo)) * (B - T);
+  ctx.font = FONT; ctx.fillStyle = "#333"; ctx.strokeStyle = "rgba(0,0,0,0.08)";
+  const step = niceStep((hi - lo) / 5);
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+    ctx.beginPath(); ctx.moveTo(L, Math.round(yv(v)) + 0.5); ctx.lineTo(R, Math.round(yv(v)) + 0.5); ctx.stroke();
+    ctx.fillText(fmtNum(v, 2), L - 5, yv(v));
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (let yr = Math.ceil(years[0] / 10) * 10; yr <= years.at(-1); yr += 10) { ctx.fillText(String(yr), x(yr), B + 6); ctx.fillRect(Math.round(x(yr)), B, 1, 4); }
+  const line = (vals, color, dash) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.setLineDash(dash ? [5, 4] : []);
+    ctx.beginPath();
+    let pen = false;
+    vals.forEach((v, k) => { if (!Number.isFinite(v)) { pen = false; return; } pen ? ctx.lineTo(x(years[k]), yv(v)) : ctx.moveTo(x(years[k]), yv(v)); pen = true; });
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  const fit = (vals) => {
+    const t = E.linearTrend({ years, values: Float64Array.from(vals) });
+    return years.map((y) => t.intercept + t.slope * y);
+  };
+  line(a, "#111"); line(b, colorB);
+  line(fit(a), "#111", true); line(fit(b), colorB, true);
+  ctx.strokeStyle = "#333"; ctx.lineWidth = 1; ctx.strokeRect(L + 0.5, T + 0.5, R - L - 1, B - T);
+}
+
+function niceStep(x) {
+  const p = Math.pow(10, Math.floor(Math.log10(x))), m = x / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
 }

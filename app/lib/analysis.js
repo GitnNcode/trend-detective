@@ -425,6 +425,80 @@ export function velocityField(v, months, opts = {}) {
  *   coherence = |mean vector| / mean speed, from 0 (directions cancel out, so
  *   the bearing means little) to 1 (everything moves the same way).
  */
+/**
+ * Climate velocity through time: the same quantity as velocityField, but
+ * computed in a moving window (default 15 years) centred on every year, so
+ * the arrows' direction and length change as the loop plays. The window is
+ * shifted, not shrunk, at the ends of the record so every frame uses the
+ * same number of years. The gradient floor is fixed from the full record so
+ * frames are comparable.
+ *
+ * @returns { years (window centres), frames: [{ u, v, speed, slope }], window,
+ *            cap (98th percentile of speed over all frames), medianSpeed, grid }
+ */
+export function velocitySeries(v, months, opts = {}) {
+  const win = Math.max(5, Math.round(opts.window ?? 15)) | 1;
+  const key = `${monthsKey(months)}|win${win}`;
+  return remember(cacheOf(v).velocity, key, () => {
+    const grid = v.entry.grid;
+    const { nlat, nlon } = grid;
+    const ncell = nlat * nlon;
+    const wrap = isFullCircle(grid);
+    const { years, fields } = annualFields(v, months);
+    const ny = years.length;
+    const base = velocityBase(v, months, true);
+    const floor = 0.1 * base.medianGrad;
+    const areas = base.areas;
+    const n = Math.min(win, ny);
+    const half = (n - 1) / 2;
+    const frames = [];
+    const allSpeeds = [], allW = [];
+    const sumY = new Float64Array(ncell), sumXY = new Float64Array(ncell), cnt = new Float64Array(ncell);
+    const sumX = new Float64Array(ncell), sumXX = new Float64Array(ncell);
+    for (let y = 0; y < ny; y++) {
+      let a = Math.round(y - half);
+      a = Math.max(0, Math.min(ny - n, a));
+      const b = a + n - 1;
+      sumY.fill(0); sumXY.fill(0); cnt.fill(0); sumX.fill(0); sumXX.fill(0);
+      for (let k = a; k <= b; k++) {
+        const x = k - a, off = k * ncell;
+        for (let c = 0; c < ncell; c++) {
+          const val = fields[off + c];
+          if (val !== val) continue;
+          cnt[c]++; sumX[c] += x; sumXX[c] += x * x; sumY[c] += val; sumXY[c] += x * val;
+        }
+      }
+      const slope = new Float32Array(ncell).fill(NaN);
+      const mean = new Float32Array(ncell).fill(NaN);
+      for (let c = 0; c < ncell; c++) {
+        const m = cnt[c];
+        if (m < Math.max(5, n * 0.7)) continue;
+        const sxx = sumXX[c] - (sumX[c] * sumX[c]) / m;
+        if (!(sxx > 0)) continue;
+        slope[c] = (sumXY[c] - (sumX[c] * sumY[c]) / m) / sxx;
+        mean[c] = sumY[c] / m;
+      }
+      const clim = smooth3x3(mean, nlat, nlon, wrap);
+      const { gradX, gradY } = gradient(clim, grid);
+      const u = new Float32Array(ncell).fill(NaN), vn = new Float32Array(ncell).fill(NaN), speed = new Float32Array(ncell).fill(NaN);
+      for (let c = 0; c < ncell; c++) {
+        const s = slope[c], gx = gradX[c], gy = gradY[c];
+        if (s !== s || gx !== gx) continue;
+        const g = Math.hypot(gx, gy);
+        const den = Math.max(g, floor);
+        if (!(den > 0)) continue;
+        const kk = -s / (den * den);
+        u[c] = kk * gx; vn[c] = kk * gy;
+        speed[c] = (Math.abs(s) * g) / (den * den);
+        if (y % 3 === 0) { allSpeeds.push(speed[c]); allW.push(areas[c]); }
+      }
+      frames.push({ u, v: vn, speed, slope, window: [years[a], years[b]] });
+    }
+    const [medianSpeed, p98] = weightedQuantiles(allSpeeds, allW, [0.5, 0.98]);
+    return { years: years.slice(), frames, window: n, cap: p98, medianSpeed, grid, units: v.entry.units ?? "" };
+  }, 8);
+}
+
 export function velocitySummary(field, region, opts = {}) {
   const grid = field.grid;
   const ncell = grid.nlat * grid.nlon;

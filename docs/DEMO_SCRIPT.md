@@ -57,3 +57,21 @@ Keep words per slide low and visuals large.
 | `arctic_lane` | 2 | Trend per decade, interval, verdict sentence |
 | `arctic_lane` | 4 | Open-water area trend and edge shift |
 | `arctic_lane` | 6 | Open months per year trend and choke point location |
+
+
+## Stage 2 numbers (filled 2026-11-15 from the real-data run)
+
+Computed with the engine on the MERRA-2 files in `/data`, exactly as the app shows them.
+
+| Where it is used | Result |
+|---|---|
+| Video 0:08-0:15, "Is the Arctic losing its summer ice?" (sea ice fraction, Arctic, September) | -3.8 percentage points per decade (95% range -4.5 to -3.1), significant (t-test p < 0.001, Mann-Kendall p < 0.001) |
+| Video 0:15-0:22, Arctic open water (ice at most 15%) in Shift mode, September | Edge moves poleward about 76 km per decade; open-water area grows 9.9% per decade; significant |
+| `jet` step 2: winter (DJF) 250 hPa wind, North Atlantic | +0.056 m/s per decade (95% range -0.53 to +0.64), not significant (t-test p = 0.85, Mann-Kendall p = 0.84) |
+| `jet` step 5: band of wind at least 40 m/s | No clear movement: edge -19 km per decade, area +7% per decade, neither significant |
+| `arctic_lane` step 2: September sea ice, Arctic | as the 0:08 line above |
+| `arctic_lane` step 4: open water area and edge | +9.9% per decade area, edge +76 km per decade poleward |
+| `arctic_lane` step 6: Northern Sea Route, Jul-Oct, open water at most 15% ice | +0.23 open months per decade (95% range +0.11 to +0.34), significant; first open month in 2008; choke point near 77.0°N 96.3°E (Vilkitsky Strait area); about 0.7 open months a year in the last decade |
+| `arctic_lane` last step: Northwest Passage | +0.24 open months per decade, suggestive; first open month in 1993 |
+| Extra (app case "Climate on the move"): Europe, zone at least 10 °C annual mean | Edge moves poleward about 114 km per decade; area grows 7.8% per decade; significant |
+| Validation (slide 7) | Global warming +0.165 °C/decade (MERRA-2) vs +0.208 (GISTEMP), r = 0.97; September ice -11.7 vs -12.4 %/decade (NSIDC), r = 0.99 |

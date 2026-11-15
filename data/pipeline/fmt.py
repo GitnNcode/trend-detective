@@ -27,6 +27,10 @@ VARIABLES = {
     "soilwet": ("M2TMNXLND", ["GWETROOT"], "0 to 1", GLOBAL_GRID, {"min": None, "max": 0.3}),
     "snow":    ("M2TMNXLND", ["SNOMAS"], "kg/m²", GLOBAL_GRID, {"min": 10, "max": None}),
     "runoff":  ("M2TMNXLND", ["RUNOFF"], "mm/day", GLOBAL_GRID, {"min": 1, "max": None}),
+    # Added for the app's wind-vector loop and the "city air" regions.
+    "u250":    ("M2TMNXSLV", ["U250"], "m/s", GLOBAL_GRID, {"min": 20, "max": None}),
+    "v250":    ("M2TMNXSLV", ["V250"], "m/s", GLOBAL_GRID, {"min": 5, "max": None}),
+    "aod":     ("M2TMNXAER", ["TOTEXTTAU"], "AOD", GLOBAL_GRID, {"min": 0.3, "max": None}),
 }
 CONST = ("M2C0NXASM", ["FROCEAN"])  # ocean fraction, used to mask land out of seaice
 
@@ -92,7 +96,7 @@ def write_catalog(outdir, entries):
     old = json.loads(path.read_text())["variables"] if path.exists() else []
     by_id = {e["id"]: e for e in old}
     by_id.update({e["id"]: e for e in entries})
-    order = ["t2m", "t500", "wind250", "tqv", "precip", "evap", "seaice", "soilwet", "snow", "runoff"]
+    order = ["t2m", "t500", "wind250", "tqv", "precip", "evap", "seaice", "soilwet", "snow", "runoff", "aod", "u250", "v250"]
     out = sorted(by_id.values(), key=lambda e: order.index(e["id"]) if e["id"] in order else 99)
     path.write_text(json.dumps({"variables": out}, indent=2, ensure_ascii=False) + "\n")
 

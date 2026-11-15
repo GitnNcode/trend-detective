@@ -1,0 +1,22 @@
+{
+  "aod": {
+    "name": "Aerosol haze (optical depth)",
+    "plain": "How much sunlight is blocked by tiny particles in the air, such as smoke, dust and pollution. 0 is perfectly clear; above 0.5 is very hazy.",
+    "why": "Cleaner factories and cars can make the air clearer, while growing cities, fires and dust storms can make it hazier."
+  },
+  "u250": {
+    "name": "East-west wind at 250 hPa",
+    "plain": "How fast the wind blows toward the east (positive) or west (negative) about 10 km up, at jet-stream height.",
+    "why": "The jet stream is driven by the temperature difference between the poles and the tropics, so it can strengthen, weaken or shift as that difference changes."
+  },
+  "v250": {
+    "name": "North-south wind at 250 hPa",
+    "plain": "How fast the wind blows toward the north (positive) or south (negative) about 10 km up.",
+    "why": "A wavier jet stream has stronger north-south winds, which can bring longer spells of hot or cold weather."
+  },
+  "velocity": {
+    "name": "Climate velocity",
+    "plain": "How fast, in kilometres per decade, a place would have to move to keep the same value: the trend divided by how quickly the value changes across the map.",
+    "why": "A small trend in a flat region (an ocean, a plain) moves the value a long way; the same trend on a steep mountainside barely moves it."
+  }
+}
