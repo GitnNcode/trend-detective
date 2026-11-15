@@ -14,6 +14,23 @@ GLOBAL_GRID = {"nlat": 91, "nlon": 144, "lat0": -90.0, "lon0": -180.0, "dlat": 2
 SEAICE_GRID = {"nlat": 41, "nlon": 288, "lat0": 50.0, "lon0": -180.0, "dlat": 1.0, "dlon": 1.25}
 
 
+# id -> (collection, fields, units, grid, defaultBand). Names checked against the
+# MERRA-2 File Specification (GMAO Office Note 9). Fluxes are kg m-2 s-1 natively.
+VARIABLES = {
+    "t2m":     ("M2TMNXSLV", ["T2M"], "°C", GLOBAL_GRID, {"min": None, "max": 0}),
+    "wind250": ("M2TMNXSLV", ["U250", "V250"], "m/s", GLOBAL_GRID, {"min": 30, "max": None}),
+    "seaice":  ("M2TMNXFLX", ["FRSEAICE"], "0 to 1", SEAICE_GRID, {"min": None, "max": 0.15}),
+    "precip":  ("M2TMNXFLX", ["PRECTOTCORR"], "mm/day", GLOBAL_GRID, {"min": 5, "max": None}),
+    "t500":    ("M2TMNXSLV", ["T500"], "°C", GLOBAL_GRID, {"min": None, "max": -20}),
+    "tqv":     ("M2TMNXSLV", ["TQV"], "kg/m²", GLOBAL_GRID, {"min": 40, "max": None}),
+    "evap":    ("M2TMNXFLX", ["EVAP"], "mm/day", GLOBAL_GRID, {"min": 3, "max": None}),
+    "soilwet": ("M2TMNXLND", ["GWETROOT"], "0 to 1", GLOBAL_GRID, {"min": None, "max": 0.3}),
+    "snow":    ("M2TMNXLND", ["SNOMAS"], "kg/m²", GLOBAL_GRID, {"min": 10, "max": None}),
+    "runoff":  ("M2TMNXLND", ["RUNOFF"], "mm/day", GLOBAL_GRID, {"min": 1, "max": None}),
+}
+CONST = ("M2C0NXASM", ["FROCEAN"])  # ocean fraction, used to mask land out of seaice
+
+
 def lats(grid):
     return grid["lat0"] + grid["dlat"] * np.arange(grid["nlat"])
 
