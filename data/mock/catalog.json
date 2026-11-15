@@ -1,0 +1,70 @@
+{
+  "variables": [
+    {
+      "id": "t2m",
+      "file": "t2m.bin",
+      "source": "MOCK (synthetic, not NASA data): MERRA-2 M2TMNXSLV, variable T2M",
+      "units": "°C",
+      "start": "1980-01",
+      "nt": 552,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.00124164,
+      "offset": -5.8915818,
+      "defaultBand": {
+        "min": null,
+        "max": 0
+      }
+    },
+    {
+      "id": "wind250",
+      "file": "wind250.bin",
+      "source": "MOCK (synthetic, not NASA data): MERRA-2 M2TMNXSLV, U250 and V250",
+      "units": "m/s",
+      "start": "1980-01",
+      "nt": 552,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.000861604,
+      "offset": 28.002129999999998,
+      "defaultBand": {
+        "min": 30,
+        "max": null
+      }
+    },
+    {
+      "id": "seaice",
+      "file": "seaice.bin",
+      "source": "MOCK (synthetic, not NASA data): MERRA-2 M2TMNXFLX, variable FRSEAICE",
+      "units": "0 to 1",
+      "start": "1980-01",
+      "nt": 552,
+      "grid": {
+        "nlat": 41,
+        "nlon": 288,
+        "lat0": 50.0,
+        "lon0": -180.0,
+        "dlat": 1.0,
+        "dlon": 1.25
+      },
+      "scale": 1.53846e-05,
+      "offset": 0.49999949999999993,
+      "defaultBand": {
+        "min": null,
+        "max": 0.15
+      }
+    }
+  ]
+}
