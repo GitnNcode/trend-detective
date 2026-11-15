@@ -58,6 +58,7 @@ export function seasonCode(months) {
   const m = [...months].sort((a, b) => a - b).join(",");
   const named = { "1,2,3,4,5,6,7,8,9,10,11,12": "ANN", "1,2,12": "DJF", "3,4,5": "MAM", "6,7,8": "JJA", "9,10,11": "SON" };
   if (named[m]) return named[m];
+  if (months.length === 1) return MONTH_NAMES[months[0] - 1].toUpperCase();
   return months.map((x) => "JFMAMJJASOND"[x - 1]).join("");
 }
 
@@ -501,8 +502,11 @@ async function boot() {
   app.cases = new CasePlayer(app);
   bindKeys();
   new ResizeObserver(() => { if (app.R.v) W.renderColorbar(); }).observe(document.getElementById("colorbar"));
+  const fresh = !location.hash || location.hash.length < 2;
   await update(["init"]);
   requestAnimationFrame(tick);
+  // First visit: run the loop once so the zone's movement is the first thing seen.
+  if (fresh) setTimeout(() => { setTime(0); setPlaying(true); }, 600);
 }
 
 function bindKeys() {

@@ -20,7 +20,7 @@ const wrapLon = (l) => ((((l + 180) % 360) + 360) % 360) - 180;
 export class MapView {
   constructor(root, handlers = {}) {
     this.root = root;
-    this.h = handlers;
+    this.handlers = handlers;
     this.glCanvas = root.querySelector("#glCanvas");
     this.ovCanvas = root.querySelector("#overlayCanvas");
     this.ctx = this.ovCanvas.getContext("2d");
@@ -192,7 +192,7 @@ export class MapView {
       if (!drag) {
         const ll = this.invert(pt.x, pt.y);
         this.hover = ll ? { ...ll, x: pt.x, y: pt.y } : null;
-        this.h.onHover?.(this.hover, pt);
+        this.handlers.onHover?.(this.hover, pt);
         this.requestRender();
         return;
       }
@@ -217,10 +217,10 @@ export class MapView {
       if (drag.draw) {
         const box = this.drawBox;
         this.drawBox = null;
-        if (box && Math.abs(box.latMax - box.latMin) > 1 && Math.abs(pt.x - drag.sx) > 6) this.h.onRegion?.(box);
+        if (box && Math.abs(box.latMax - box.latMin) > 1 && Math.abs(pt.x - drag.sx) > 6) this.handlers.onRegion?.(box);
       } else if (!drag.moved) {
         const ll = this.invert(pt.x, pt.y);
-        if (ll) this.h.onClick?.(ll, pt);
+        if (ll) this.handlers.onClick?.(ll, pt);
       }
       drag = null;
       this.lowRes = false;
@@ -229,7 +229,7 @@ export class MapView {
     };
     el.addEventListener("pointerup", end);
     el.addEventListener("pointercancel", end);
-    el.addEventListener("pointerleave", () => { if (!drag) { this.hover = null; this.h.onHover?.(null); this.requestRender(); } });
+    el.addEventListener("pointerleave", () => { if (!drag) { this.hover = null; this.handlers.onHover?.(null); this.requestRender(); } });
     el.addEventListener("wheel", (e) => {
       e.preventDefault();
       const f = Math.exp(-e.deltaY * 0.0016);

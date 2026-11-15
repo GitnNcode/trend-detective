@@ -92,5 +92,6 @@ export function trendRamp(id) {
 // Width (in stored units) of the five enhancement steps inside a Shift zone.
 export function zoneSoft(id) {
   const v = varStyle(id);
+  if (v.domain[1] - v.domain[0] <= 1.0001 && v.domain[0] >= 0) return 0.5; // fractions: 10-point steps
   return (v.domain[1] - v.domain[0]) * ((v.gamma ?? 1) < 1 ? 0.4 : 0.12);
 }

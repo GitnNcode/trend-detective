@@ -187,11 +187,16 @@ function safeFormat(fn, fallback) {
   };
 }
 
-// Join a formatted value and its units. Strings that already carry text
-// (from a user formatter such as "3 of 4 months" or "65.2°N") are left alone.
-function withUnits(s, units) {
-  if (!units || !/^[\s\d.,+\-−eE]+$/.test(s)) return s;
+// Join a formatted value and its units ("3.56 M km²", "45%").
+function joinUnits(s, units) {
+  if (!units) return s;
   return /^(%|‰|°[NSEW]?)$/.test(units) ? s + units : s + " " + units;
+}
+
+// For user formatters: add units only to a bare number. Strings that already
+// carry text (such as "3 of 4 months" or "65.2°N") are left alone.
+function withUnits(s, units) {
+  return /^[\s\d.,+\-−eE]+$/.test(s) ? joinUnits(s, units) : s;
 }
 
 // ---------------------------------------------------------------------------
@@ -479,11 +484,11 @@ function buildScene(spec) {
   const s = spec && typeof spec === "object" ? spec : {};
   const kind = KINDS.has(s.kind) ? s.kind : "series";
   const units = s.units != null ? String(s.units) : "";
-  const fmt = safeFormat(s.format, smartFormat);
+  const fmt = typeof s.format === "function" ? safeFormat(s.format, smartFormat) : null;
   const sc = {
     kind, units,
     color: s.color ? String(s.color) : "",
-    readout: (v) => (isFin(v) ? withUnits(fmt(v), units) : "no data"),
+    readout: (v) => (!isFin(v) ? "no data" : fmt ? withUnits(fmt(v), units) : joinUnits(smartFormat(v), units)),
     userTick: typeof s.tickFormat === "function" ? safeFormat(s.tickFormat, smartFormat) : null,
     title: s.title ? String(s.title) : "",
     emptyText: s.emptyText ? String(s.emptyText) : "No data",
@@ -1219,8 +1224,12 @@ function drawCursor(g, sc, L, th, dpr, c) {
     if (py < L.top - 4 || py > L.bottom + 4) return;
     g.strokeRect(snapPx(px - 4, dpr) + 0.5, snapPx(py - 4, dpr) + 0.5, 7, 7);
   } else {
+    // The playhead's year: its bar at full opacity, covering the line inside it.
     const [bx, by, bw, bh] = barBox(sc, L, i, dpr);
-    if (bw >= 2 && bh >= 2) g.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+    if (bw > 0 && bh > 0) {
+      g.fillStyle = sc.color || th.series;
+      g.fillRect(bx, by, bw, bh);
+    }
   }
 }
 

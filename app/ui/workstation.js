@@ -23,6 +23,8 @@ export function fmtNum(x, sig = 3) {
 export const signed = (x, sig = 2) => (Number.isFinite(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + fmtNum(Math.abs(x), sig) : "–");
 const pTxt = (p) => (!Number.isFinite(p) ? "–" : p < 0.001 ? "<.001" : p.toFixed(3).replace(/^0/, ""));
 const dispUnits = (id) => E.displayUnits(unitsOf(id));
+// Units for absolute values (fractions shown as %); dispUnits is for rates.
+export const absUnits = (id) => (/0 to 1/.test(unitsOf(id)) ? { factor: 100, label: "%" } : { factor: 1, label: unitsOf(id) });
 const code = (id) => varStyle(id).code;
 
 // ---------------------------------------------------------------- menus
@@ -109,15 +111,15 @@ export function renderToolbar() {
   const vs = varStyle(s.variable);
   let prod = "";
   if (s.mode === "band") {
-    const b = s.band;
+    const b = s.band, au = absUnits(s.variable);
     const which = b.min != null && b.max != null ? "between" : b.min != null ? "above" : "below";
     prod = `<span class="tlabel">Zone</span><div class="tg">
       <button class="tb ${which === "above" ? "on" : ""}" data-w="above" title="At or above">≥</button>
       <button class="tb ${which === "below" ? "on" : ""}" data-w="below" title="At or below">≤</button>
       <button class="tb ${which === "between" ? "on" : ""}" data-w="between" title="Between">↔</button></div>
-      ${which === "between" ? `<input class="tinput" id="thrMin" type="number" step="${vs.step}" value="${b.min}"><span class="tlabel">–</span><input class="tinput" id="thrMax" type="number" step="${vs.step}" value="${b.max}">`
-        : `<input class="tinput" id="thrOne" type="number" step="${vs.step}" value="${which === "below" ? b.max : b.min}">`}
-      <span class="tlabel">${esc(unitsOf(s.variable))}</span>
+      ${which === "between" ? `<input class="tinput" id="thrMin" type="number" step="${vs.step * au.factor}" value="${r6(b.min * au.factor)}"><span class="tlabel">–</span><input class="tinput" id="thrMax" type="number" step="${vs.step * au.factor}" value="${r6(b.max * au.factor)}">`
+        : `<input class="tinput" id="thrOne" type="number" step="${vs.step * au.factor}" value="${r6((which === "below" ? b.max : b.min) * au.factor)}">`}
+      <span class="tlabel">${esc(au.label)}</span>
       <input class="trange" id="thrRange" type="range" min="${vs.domain[0]}" max="${vs.domain[1]}" step="${vs.step}" value="${which === "below" ? b.max : b.min}" title="Threshold">`;
   } else if (s.mode === "route") {
     prod = `<span class="tlabel">Route</span><select class="tselect" id="routeSel">${app.content.routes.filter((r) => r.id !== "nyc_lon").map((r) => `<option value="${r.id}" ${r.id === s.route ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>
@@ -165,16 +167,16 @@ export function renderToolbar() {
     else if (b.dataset.w === "below") actions.setBand({ min: null, max: cur });
     else { const half = (vs.domain[1] - vs.domain[0]) * 0.05; actions.setBand({ min: round(cur - half, vs.step), max: round(cur + half, vs.step) }); }
   }));
-  const one = $("#thrOne", tb), rng = $("#thrRange", tb);
+  const one = $("#thrOne", tb), rng = $("#thrRange", tb), auf = absUnits(s.variable).factor;
   const commitOne = (v) => actions.setBand(s.band.max != null && s.band.min == null ? { min: null, max: v } : { min: v, max: null });
-  one?.addEventListener("change", () => commitOne(Number(one.value)));
-  rng?.addEventListener("input", () => { if (one) one.value = rng.value; });
+  one?.addEventListener("change", () => commitOne(Number(one.value) / auf));
+  rng?.addEventListener("input", () => { if (one) one.value = r6(Number(rng.value) * auf); });
   rng?.addEventListener("change", () => {
     if (one) commitOne(Number(rng.value));
     else actions.setBand({ min: Number(rng.value), max: Math.max(Number(rng.value), s.band.max) });
   });
-  $("#thrMin", tb)?.addEventListener("change", (e) => actions.setBand({ min: Math.min(Number(e.target.value), s.band.max), max: s.band.max }));
-  $("#thrMax", tb)?.addEventListener("change", (e) => actions.setBand({ min: s.band.min, max: Math.max(Number(e.target.value), s.band.min) }));
+  $("#thrMin", tb)?.addEventListener("change", (e) => actions.setBand({ min: Math.min(Number(e.target.value) / auf, s.band.max), max: s.band.max }));
+  $("#thrMax", tb)?.addEventListener("change", (e) => actions.setBand({ min: s.band.min, max: Math.max(Number(e.target.value) / auf, s.band.min) }));
   $("#routeSel", tb)?.addEventListener("change", (e) => actions.set({ route: e.target.value }));
   $("#routeMax", tb)?.addEventListener("change", (e) => actions.setBand({ min: null, max: Math.max(1, Math.min(60, Number(e.target.value))) / 100 }));
   $("#cityIn", tb)?.addEventListener("change", (e) => {
@@ -187,6 +189,7 @@ export function renderToolbar() {
   updateFrame();
 }
 const round = (x, step) => Math.round(x / step) * step;
+const r6 = (x) => (x == null ? "" : Math.round(x * 1e6) / 1e6);
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 // ---------------------------------------------------------------- per-frame
@@ -217,12 +220,13 @@ export function renderLegend() {
   const s = app.state, R = app.R;
   if (!R.v) return;
   const el = $("#figTitle");
-  const def = defOf(s.variable), u = unitsOf(s.variable);
+  const def = defOf(s.variable), au = absUnits(s.variable), u = au.label;
   const where = R.region.type === "global" ? "Global" : R.region.name;
   let t;
   if (s.mode === "band") {
     const b = s.band;
-    const thr = b.min != null && b.max != null ? `${fmtNum(b.min)} to ${fmtNum(b.max)} ${u}` : b.min != null ? `≥ ${fmtNum(b.min)} ${u}` : `≤ ${fmtNum(b.max)} ${u}`;
+    const F = (x) => fmtNum(x * au.factor);
+    const thr = b.min != null && b.max != null ? `${F(b.min)} to ${F(b.max)} ${u}` : b.min != null ? `≥ ${F(b.min)} ${u}` : `≤ ${F(b.max)} ${u}`;
     t = `${def.name}: zone ${thr}`;
   } else if (s.mode === "map" && s.layerView === "trend") t = `${def.name}: linear trend per decade`;
   else if (s.mode === "flow") t = `${def.name}: climate velocity`;
@@ -276,7 +280,7 @@ export function renderColorbar() {
     const L = vs.levels, lo = vs.domain[0], hi = vs.domain[1], g = vs.gamma ?? 1;
     const at = (k) => lo + (hi - lo) * Math.pow(k / L, 1 / g);
     const split = x0 + (x1 - x0) * 0.62;
-    bar(L, (k) => { const v = Math.round((0.96 + (0.6 - 0.96) * (k + 0.5) / L) * 255); return `rgb(${v},${v},${v})`; }, Array.from({ length: L + 1 }, (_, k) => fmtNum(at(k), 2)), `${code(s.variable)}  (${unitsOf(s.variable)})`, x0, split - 16);
+    bar(L, (k) => { const v = Math.round((0.96 + (0.6 - 0.96) * (k + 0.5) / L) * 255); return `rgb(${v},${v},${v})`; }, Array.from({ length: L + 1 }, (_, k) => fmtNum(at(k) * absUnits(s.variable).factor, 2)), `${code(s.variable)}  (${absUnits(s.variable).label})`, x0, split - 16);
     if (s.showRings) {
       const yrs = app.frames.years;
       const bins = 10, n = yrs.length;
@@ -285,12 +289,14 @@ export function renderColorbar() {
     } else {
       const soft = zoneSoft(s.variable);
       const b = s.band, base = b.min ?? b.max, dir = b.min != null ? 1 : -1;
-      bar(5, (k) => stepColor("zone", k, 5), Array.from({ length: 6 }, (_, k) => fmtNum(base + dir * (soft * k) / 5, 2)), `ZONE (${b.min != null ? "≥" : "≤"} ${fmtNum(base)})`, split, x1);
+      const af = absUnits(s.variable).factor;
+      bar(5, (k) => stepColor("zone", k, 5), Array.from({ length: 6 }, (_, k) => fmtNum((base + dir * (soft * k) / 5) * af, 2)), `ZONE (${b.min != null ? "≥" : "≤"} ${fmtNum(base * af)} ${absUnits(s.variable).label})`, split, x1);
     }
   } else {
     const L = vs.levels, lo = vs.domain[0], hi = vs.domain[1], g = vs.gamma ?? 1;
     const at = (k) => lo + (hi - lo) * Math.pow(k / L, 1 / g);
-    bar(L, (k) => stepColor(vs.ramp, k, L), Array.from({ length: L + 1 }, (_, k) => fmtNum(at(k) * factor, 2)), `${code(s.variable)}  ${defOf(s.variable).name.toUpperCase()}  (${label})`);
+    const au = absUnits(s.variable);
+    bar(L, (k) => stepColor(vs.ramp, k, L), Array.from({ length: L + 1 }, (_, k) => fmtNum(at(k) * au.factor, 2)), `${code(s.variable)}  ${defOf(s.variable).name.toUpperCase()}  (${au.label})`);
   }
 }
 
@@ -472,7 +478,7 @@ function seriesSpec(s, R, factor, label) {
     const off = s.deseason ? meanOf(Array.from(R.annual.values)) - meanOf(vals) : 0;
     monthly = { x, values: vals.map((v) => v + off) };
   }
-  return { kind: "series", years: R.annual.years, values: R.annual.values, monthly, units: unitsOf(s.variable), fit: true, color: "#1a1a1a", format: (v) => `${fmtNum(v * factor, 3)} ${label}`, extendTo: pending ? Math.max(det.etaYear + 2, R.annual.years.at(-1) + 5) : undefined, markers: pending ? [{ year: det.etaYear, label: `detectable ~${det.etaYear}`, color: "#d62728" }] : [] };
+  return { kind: "series", years: R.annual.years, values: R.annual.values, monthly, units: unitsOf(s.variable), fit: true, color: "#1a1a1a", format: (v) => `${fmtNum(v * absUnits(s.variable).factor, 3)} ${absUnits(s.variable).label}`, extendTo: pending ? Math.max(det.etaYear + 2, R.annual.years.at(-1) + 5) : undefined, markers: pending ? [{ year: det.etaYear, label: `detectable ~${det.etaYear}`, color: "#d62728" }] : [] };
 }
 
 function seasonalSpec(R) {
@@ -606,7 +612,8 @@ export function hover(ll) {
     const i = Math.round((ll.lat - g.lat0) / g.dlat), j = ((Math.round((ll.lon - g.lon0) / g.dlon) % g.nlon) + g.nlon) % g.nlon;
     if (i >= 0 && i < g.nlat) val = v.value(Math.round(app.t), i, j);
   }
-  parts.push(`${code(s.variable)} ${Number.isFinite(val) ? fmtNum(val * factor, 3) + " " + label : "—"}`);
+  const au = absUnits(s.variable);
+  parts.push(`${code(s.variable)} ${Number.isFinite(val) ? fmtNum(val * au.factor, 3) + " " + au.label : "—"}`);
   if (R.tmap) {
     const sl = D.sampleGrid(R.tmap.slope, g, ll.lat, ll.lon), p = D.sampleGrid(R.tmap.p, g, ll.lat, ll.lon);
     if (Number.isFinite(sl)) parts.push(`trend ${signed(sl * 10 * factor, 2)}/dec ${p < 0.05 ? "*" : "n.s."}`);
