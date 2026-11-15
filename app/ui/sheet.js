@@ -1,20 +1,20 @@
-// Full-stage sheets: the suspect lineup (all 10 variables tested for one
-// region) and the planet-scan atlas (every variable's trend map).
+// Multi-panel displays: the trend atlas (10 small trend maps) and the field
+// lineup (10 small time-series plots, strongest evidence first).
 // Written with Claude and reviewed by the team.
 
 import * as d3 from "d3";
-import { actions, defOf, monthsLabel, unitsOf } from "../main.js";
-import { varStyle, rampLUT, trendRamp } from "../palettes.js";
 import * as E from "../../engine/index.js";
-import { fmtNum } from "./panels.js";
+import { actions, defOf, unitsOf, seasonCode } from "../main.js";
+import { varStyle, rampLUT, trendRamp } from "../palettes.js";
+import { fmtNum, signed } from "./workstation.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const signed = (x, sig = 2) => (Number.isFinite(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + fmtNum(Math.abs(x), sig) : "–");
+const FONT = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
 
 export function renderSheet(app) {
   const el = document.getElementById("sheet");
   const s = app.state, R = app.R;
-  if (s.view !== "app" || !["lineup", "atlas"].includes(s.mode)) { el.hidden = true; el.innerHTML = ""; return; }
+  if (!["lineup", "atlas"].includes(s.mode)) { el.hidden = true; el.innerHTML = ""; el.dataset.key = ""; return; }
   el.hidden = false;
   if (s.mode === "lineup" && R.lineup) lineup(app, el);
   if (s.mode === "atlas" && R.atlas) atlas(app, el);
@@ -22,129 +22,149 @@ export function renderSheet(app) {
 
 function lineup(app, el) {
   const s = app.state, R = app.R;
-  const key = JSON.stringify(["lu", R.region.latMin, R.region.lonMin, R.region.latMax, R.region.lonMax, s.months]);
+  const key = JSON.stringify(["lu", R.region.latMin, R.region.latMax, R.region.lonMin, R.region.lonMax, s.months]);
   if (el.dataset.key === key) return;
   el.dataset.key = key;
   const list = R.lineup;
-  el.innerHTML = `
-    <div class="sheet-head">
-      <div><h2>The lineup: <em>${esc(R.region.name)}</em></h2>
-      <p>Ten suspects, one region, ${esc(monthsLabel(s.months))}, ${list[0]?.annual?.years?.[0] ?? 1980}–${list[0]?.annual?.years?.at(-1) ?? 2025}. Each one is tested with a t-test and an autocorrelation-corrected Mann–Kendall test. The strongest evidence stands on the left.</p></div>
-      <button class="btn" id="lineupClose">Back to the map</button>
-    </div>
-    <div class="lineup-wall">
-      ${list.map((x, k) => {
-        const st = varStyle(x.id);
-        const { factor, label } = E.displayUnits(x.units);
-        const vd = x.verdict;
-        const lvl = x.empty ? "none" : vd.level;
-        return `<button class="suspect ${x.empty ? "empty" : ""} ${k === 0 && !x.empty && lvl === "significant" ? "rank1" : ""}" data-id="${x.id}" style="animation-delay:${k * 60}ms">
-          <div class="no">SUSPECT #${String(k + 1).padStart(2, "0")}</div>
-          <div class="sn">${esc(defOf(x.id).name)}</div>
-          <div class="sr ${vd.perDecade > 0 ? "up" : "down"}">${x.empty ? "no data here" : `${signed(vd.perDecade * factor, 2)} ${esc(label)}/dec`}</div>
-          <canvas data-spark="${k}"></canvas>
-          ${x.empty ? "" : `<div class="stamp ${lvl}">${lvl === "significant" ? "Significant" : lvl === "suggestive" ? "Suggestive" : "Not proven"}</div>`}
-          <div class="small muted" style="margin-top:6px;font-family:var(--font-mono);font-size:10.5px">${x.empty ? "" : `t = ${fmtNum(x.tStat, 2)} · p ${vd.pT < 0.001 ? "< 0.001" : "= " + fmtNum(vd.pT, 2)}`}</div>
-        </button>`;
-      }).join("")}
-    </div>`;
-  el.querySelector("#lineupClose").addEventListener("click", () => actions.setMode("series"));
-  el.querySelectorAll(".suspect").forEach((b) => b.addEventListener("click", () => { actions.set({ mode: "series", variable: b.dataset.id }); }));
-  el.querySelectorAll("canvas[data-spark]").forEach((cv) => {
-    const x = list[Number(cv.dataset.spark)];
-    if (!x || x.empty) return;
-    const color = varStyle(x.id).trend === "wet" ? "#3fd0c9" : varStyle(x.id).trend === "ice" ? "#7cd2ff" : "#ff8a3d";
-    if (app.C?.drawSparkline) app.C.drawSparkline(cv, Array.from(x.annual.values), { color, fit: true, width: cv.clientWidth || 140, height: 46 });
-  });
+  el.innerHTML = `<div class="panels">${list.map((x, k) => {
+    const vd = x.verdict, { factor, label } = E.displayUnits(x.units);
+    const lvl = x.empty ? "none" : vd.level;
+    return `<button class="pnl" data-id="${x.id}">
+      <div class="pt"><span>${k + 1}. ${esc(varStyle(x.id).short)}</span><span class="v">${x.empty ? "no data" : `${signed(vd.perDecade * factor, 2)} ${esc(label)}/dec`}</span></div>
+      <canvas data-k="${k}" height="120"></canvas>
+      <div class="lampline"><span class="lamp ${x.empty ? "" : lvl === "significant" ? "sig" : lvl === "suggestive" ? "sug" : ""}"><i></i></span>${x.empty ? "outside the field's coverage" : `${lvl === "significant" ? "significant" : lvl === "suggestive" ? "suggestive" : "not significant"} · t ${fmtNum(x.tStat, 2)}`}</div>
+    </button>`;
+  }).join("")}</div><p class="sheet-note">Regional anomaly series, ${esc(seasonCode(s.months))}, ordered by strength of evidence (t-test and autocorrelation-corrected Mann–Kendall). Dashed red: least-squares trend. Click a panel to open it.</p>`;
+  el.querySelectorAll(".pnl").forEach((b) => b.addEventListener("click", () => actions.set({ mode: "series", variable: b.dataset.id })));
+  requestAnimationFrame(() => el.querySelectorAll("canvas[data-k]").forEach((cv) => {
+    const x = list[Number(cv.dataset.k)];
+    if (x && !x.empty) miniPlot(cv, x.annual.years, Array.from(x.annual.values), x.trend);
+  }));
+}
+
+function miniPlot(cv, years, values, trend) {
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const W = cv.clientWidth || 200, H = cv.clientHeight || 110;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
+  const fin = values.filter(Number.isFinite);
+  const mean = fin.reduce((a, b) => a + b, 0) / Math.max(1, fin.length);
+  const an = values.map((v) => v - mean);
+  let lo = Math.min(...an.filter(Number.isFinite)), hi = Math.max(...an.filter(Number.isFinite));
+  const pad = (hi - lo) * 0.12 || 1;
+  lo -= pad; hi += pad;
+  const L = 6, Rr = W - 6, T = 6, B = H - 16;
+  const x = (y) => L + ((y - years[0]) / Math.max(1, years[years.length - 1] - years[0])) * (Rr - L);
+  const yv = (v) => B - ((v - lo) / (hi - lo)) * (B - T);
+  ctx.strokeStyle = "rgba(0,0,0,0.25)";
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath(); ctx.moveTo(L, Math.round(yv(0)) + 0.5); ctx.lineTo(Rr, Math.round(yv(0)) + 0.5); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "#1a1a1a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  let pen = false;
+  an.forEach((v, k) => { if (!Number.isFinite(v)) { pen = false; return; } pen ? ctx.lineTo(x(years[k]), yv(v)) : ctx.moveTo(x(years[k]), yv(v)); pen = true; });
+  ctx.stroke();
+  if (Number.isFinite(trend?.slope)) {
+    const ym = years.reduce((a, b) => a + b, 0) / years.length;
+    const f = (yr) => trend.slope * (yr - ym);
+    ctx.strokeStyle = "#d62728";
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x(years[0]), yv(f(years[0]))); ctx.lineTo(x(years.at(-1)), yv(f(years.at(-1)))); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, W - 1, B + 3);
+  ctx.fillStyle = "#333";
+  ctx.font = FONT;
+  ctx.textAlign = "center";
+  for (const yr of [1980, 2000, 2020]) if (yr >= years[0] && yr <= years.at(-1)) { ctx.fillText(String(yr), x(yr), H - 3); ctx.fillRect(Math.round(x(yr)), B + 3, 1, -4); }
 }
 
 function atlas(app, el) {
   const s = app.state, R = app.R;
-  const key = JSON.stringify(["at", s.months]);
+  const key = JSON.stringify(["at", s.months, s.hatch]);
   if (el.dataset.key === key) return;
   el.dataset.key = key;
   const items = R.atlas;
-  el.innerHTML = `
-    <div class="sheet-head">
-      <div><h2>Planet scan: <em>every variable, every cell</em></h2>
-      <p>${items.length} variables × ${(items[0].v.entry.grid.nlat * items[0].v.entry.grid.nlon).toLocaleString("en-US")} grid cells, one trend test per cell (${esc(monthsLabel(s.months))}). Faded and hatched cells are not significant. The bar under each map is the share of the area that is significantly rising (orange) or falling (blue).</p></div>
-      <button class="btn" id="atlasClose">Back to the map</button>
-    </div>
-    <div class="atlas-grid">
-      ${items.map((it, k) => `<button class="atlas-card" data-id="${it.id}" style="animation-delay:${k * 50}ms">
-        <div class="an"><b>${esc(defOf(it.id).name)}</b><span>${esc(unitsOf(it.id))}/decade</span></div>
-        <canvas data-k="${k}" width="720" height="360"></canvas>
-        <div class="census" data-c="${k}"></div><div class="census-l" data-cl="${k}"></div>
-      </button>`).join("")}
-    </div>`;
-  el.querySelector("#atlasClose").addEventListener("click", () => actions.setMode("map"));
-  el.querySelectorAll(".atlas-card").forEach((b) => b.addEventListener("click", () => actions.set({ mode: "map", variable: b.dataset.id, layerView: "trend", regionId: "global", custom: null })));
-  // Render maps progressively so the page stays responsive.
+  el.innerHTML = `<div class="panels">${items.map((it, k) => `<button class="pnl" data-id="${it.id}">
+      <div class="pt"><span>${esc(varStyle(it.id).short)}</span><span class="v" data-scale="${k}"></span></div>
+      <canvas data-k="${k}"></canvas>
+    </button>`).join("")}</div>
+    <p class="sheet-note">Least-squares trend in every grid cell, ${esc(seasonCode(s.months))}, 1980–2025. Each panel has its own symmetric scale (red: rising, blue: falling; for sea ice and snow the colors are reversed so blue means more). Hatched: not significant (p ≥ 0.05). Click a panel to open it.</p>`;
+  el.querySelectorAll(".pnl").forEach((b) => b.addEventListener("click", () => actions.set({ mode: "map", variable: b.dataset.id, layerView: "trend", regionId: "global", custom: null })));
   let k = 0;
   const next = () => {
     if (k >= items.length || el.dataset.key !== key) return;
-    drawAtlasCard(app, el, items[k], k);
+    drawAtlas(app, el, items[k], k);
     k++;
-    setTimeout(next, 16);
+    setTimeout(next, 10);
   };
-  next();
+  requestAnimationFrame(next);
 }
 
-function drawAtlasCard(app, el, it, k) {
+function drawAtlas(app, el, it, k) {
   const cv = el.querySelector(`canvas[data-k="${k}"]`);
   if (!cv) return;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const W = cv.clientWidth || 220, H = Math.round(W / 2);
+  cv.style.height = H + "px";
+  cv.width = W * dpr; cv.height = H * dpr;
   const ctx = cv.getContext("2d");
-  const W = cv.width, H = cv.height;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const g = it.v.entry.grid, tm = it.tm;
-  const tr = trendRamp(it.id);
-  const lut = rampLUT(tr.ramp, { flip: tr.flip });
+  const tr = trendRamp(it.id), lut = rampLUT(tr.ramp, { flip: tr.flip });
   const vals = [];
   for (const x of tm.slope) if (Number.isFinite(x)) vals.push(Math.abs(x));
   vals.sort((a, b) => a - b);
-  const mx = vals[Math.floor(vals.length * 0.98)] || 1;
-  // Paint the grid at native resolution, then scale it up smoothly.
-  const src = document.createElement("canvas");
-  src.width = g.nlon; src.height = g.nlat;
-  const sctx = src.getContext("2d");
-  const img = sctx.createImageData(g.nlon, g.nlat);
-  let up = 0, down = 0, tot = 0;
-  const areas = E.rowAreasKm2(g);
-  for (let i = 0; i < g.nlat; i++) {
-    for (let j = 0; j < g.nlon; j++) {
-      const c = i * g.nlon + j;
-      const row = g.nlat - 1 - i;
-      const o = (row * g.nlon + j) * 4;
-      const sl = tm.slope[c], p = tm.p[c];
-      if (!Number.isFinite(sl)) { img.data[o] = 9; img.data[o + 1] = 13; img.data[o + 2] = 22; img.data[o + 3] = 255; continue; }
-      tot += areas[i];
-      if (p < 0.05) (sl > 0 ? (up += areas[i]) : (down += areas[i]));
-      const t = Math.max(0, Math.min(255, Math.round((sl / mx * 0.5 + 0.5) * 255)));
-      let r = lut[t * 4], gg = lut[t * 4 + 1], b = lut[t * 4 + 2];
-      if (!(p < 0.05)) { const l = 0.3 * r + 0.59 * gg + 0.11 * b; r = (l * 0.7 + r * 0.3) * 0.55; gg = (l * 0.7 + gg * 0.3) * 0.55; b = (l * 0.7 + b * 0.3) * 0.55; }
+  let mx = vals[Math.floor(vals.length * 0.98)] || 1;
+  const p10 = Math.pow(10, Math.floor(Math.log10(mx)));
+  mx = Math.ceil(mx / p10 * 2) / 2 * p10;
+  const L = 12;
+  const proj = d3.geoEquirectangular().fitSize([W, H], { type: "Sphere" });
+  const img = ctx.createImageData(W * dpr, H * dpr);
+  const hatch = app.state.hatch;
+  for (let py = 0; py < H * dpr; py++) {
+    const lat = 90 - ((py + 0.5) / (H * dpr)) * 180;
+    const i = Math.round((lat - g.lat0) / g.dlat);
+    for (let px = 0; px < W * dpr; px++) {
+      const o = (py * W * dpr + px) * 4;
+      const lon = -180 + ((px + 0.5) / (W * dpr)) * 360;
+      let r = 214, gg = 214, b = 214;
+      if (i >= 0 && i < g.nlat) {
+        const j = ((Math.round((lon - g.lon0) / g.dlon) % g.nlon) + g.nlon) % g.nlon;
+        const c = i * g.nlon + j, sl = tm.slope[c], p = tm.p[c];
+        if (Number.isFinite(sl)) {
+          const t = Math.max(0, Math.min(1, (sl / mx) * 0.5 + 0.5));
+          const q = Math.min(L - 1, Math.floor(t * L));
+          const li = Math.round(((q + 0.5) / L) * 255) * 4;
+          r = lut[li]; gg = lut[li + 1]; b = lut[li + 2];
+          if (hatch && !(p < 0.05)) {
+            r = r + (237 - r) * 0.62; gg = gg + (237 - gg) * 0.62; b = b + (237 - b) * 0.62;
+            if ((px + py) % Math.round(6 * dpr) < dpr) { r *= 0.6; gg *= 0.6; b *= 0.6; }
+          }
+        }
+      }
       img.data[o] = r; img.data[o + 1] = gg; img.data[o + 2] = b; img.data[o + 3] = 255;
     }
   }
-  sctx.putImageData(img, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  // seaice covers only 50-90N: place it in its latitude band.
-  const y0 = ((90 - (g.lat0 + (g.nlat - 1) * g.dlat + g.dlat / 2)) / 180) * H;
-  const y1 = ((90 - (g.lat0 - g.dlat / 2)) / 180) * H;
-  ctx.fillStyle = "#05080f";
-  ctx.fillRect(0, 0, W, H);
-  ctx.drawImage(src, 0, Math.max(0, y0), W, Math.min(H, y1) - Math.max(0, y0));
+  ctx.putImageData(img, 0, 0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const world = app.map.world;
   if (world) {
-    const proj = d3.geoEquirectangular().fitSize([W, H], { type: "Sphere" });
-    const path = d3.geoPath(proj, ctx);
     ctx.beginPath();
-    path(world.land110);
-    ctx.strokeStyle = "rgba(235,242,250,0.55)";
-    ctx.lineWidth = 0.8;
+    d3.geoPath(proj, ctx)(world.land110);
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 0.6;
     ctx.stroke();
   }
-  const cen = el.querySelector(`[data-c="${k}"]`), cl = el.querySelector(`[data-cl="${k}"]`);
-  const fu = up / (tot || 1), fd = down / (tot || 1);
-  cen.innerHTML = `<i style="width:${fd * 100}%;background:#4cc9ff"></i><i style="width:${(1 - fu - fd) * 100}%;background:rgba(255,255,255,0.1)"></i><i style="width:${fu * 100}%;background:#ff8a3d"></i>`;
-  cl.innerHTML = `<span>${Math.round(fd * 100)}% falling</span><span>±${fmtNum(mx * 10, 2)} scale</span><span>${Math.round(fu * 100)}% rising</span>`;
+  const { factor, label } = E.displayUnits(unitsOf(it.id));
+  const sc = el.querySelector(`[data-scale="${k}"]`);
+  if (sc) sc.textContent = `±${fmtNum(mx * 10 * factor, 2)} ${label}/dec`;
 }
