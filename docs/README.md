@@ -42,6 +42,18 @@ PLAN.md             project contract and lane briefs
 
 We used Claude (Anthropic) to help write code and text in this project. Claude-assisted files include the content JSON files and this documentation (written with Claude, edited and checked by the team) and `[the other lanes' code: each lane to confirm]`. Git commits made with Claude carry a `Co-Authored-By` trailer. `[Team to state which parts were written by hand.]`
 
+## Docs index
+
+| File | What it is |
+|---|---|
+| [`SUBMISSION_REQUIREMENTS.md`](SUBMISSION_REQUIREMENTS.md) | The verified 2026 rules: demo limits, fields, deadline, SI rules, judging criteria |
+| [`SUBMISSION.md`](SUBMISSION.md) | Draft text for every project page field, plus a self-check against the five criteria |
+| [`SUBMIT_CHECKLIST.md`](SUBMIT_CHECKLIST.md) | Tick-list to run before clicking "Submit for Judging" |
+| [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | 30-second video and 7-slide plans, narration fill-in table |
+| [`VALIDATION.md`](VALIDATION.md) | Method and template for checking our trends against published NASA and NSIDC numbers |
+| [`REFERENCES.md`](REFERENCES.md) | Citations for data, validation sources and tools |
+| [`OPEN_ITEMS.md`](OPEN_ITEMS.md) | Decisions and questions for the group chat |
+
 ## Data and references
 
 NASA MERRA-2 monthly means from NASA GES DISC. Full citations: [`REFERENCES.md`](REFERENCES.md). Validation against published NASA and NSIDC numbers: [`VALIDATION.md`](VALIDATION.md).

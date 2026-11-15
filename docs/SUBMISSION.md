@@ -33,6 +33,10 @@ Trend Detective is a free website that turns a student into a data detective. Th
 
 **Beyond the objectives.** The challenge notes that one variable can trend in opposite directions in different regions. The trend map and the paired sample questions (for example Arctic versus Antarctic temperature, Sahel versus Mediterranean rainfall) are built to show exactly that. The challenge suggests watchable examples; the two guided cases are those.
 
+**Benefits.** It lowers the barrier to real climate-data analysis: no coding, no account, no download. Students learn the difference between a trend and a significant trend, and see that a result that is not significant is still a finding. Teachers get two ready-made guided cases.
+
+**Goals.** Help high school and college students, and members of the public with some science background, find a variable, pick a place, and judge for themselves whether a change in the Earth system is real. `[Team: add any further goals]`
+
 **Honest limits.** Linear trends only, on a record of roughly 45 years. MERRA-2 is a model-assimilated reanalysis, not a direct measurement. Grid cells are 2.0° by 2.5° (1.0° by 1.25° for sea ice), so narrow features such as straits and small estuaries are blurred. A trend that is not significant is reported as such.
 
 **Tools.** Vanilla JavaScript (ES modules), HTML canvas, d3-geo, Tailwind CSS. A Python pipeline (`/data/pipeline`) builds the data files. No backend. `[Lane 3: confirm hosting and final tool list]`
@@ -56,3 +60,19 @@ Validation references: NASA GISS Surface Temperature Analysis (GISTEMP v4), and 
 ## Space Agency Partner Data and Other References
 
 See `REFERENCES.md` for full citations. Include every code library, font, image and text source here, even open source ones, because the form requires it. `[Lane 3: add every CDN library, font and image actually shipped; Lane 1: add every Python package]`
+
+---
+
+## Self-check against the five judging criteria
+
+Each project is scored 1 to 5 on these (Judging & Awards Guide, 2026). Use this to decide what the final site, demo and description must visibly show. "Gap" means something still to do, not a claim we can make today.
+
+| Criterion | What the guide rewards | What we can point to | Gap / to do |
+|---|---|---|---|
+| Impact | Real problem, reach, who it helps | Students and the public can test whether a change in the Earth system is real, with no install or login | Say who it is for (high school, college, public) in the demo |
+| Creativity | Original idea or meaningful improvement | Significance verdict in plain language, trend sign-flip map, Shift mode, guided cases | Show Shift mode on screen in the demo; it is the most distinctive feature |
+| Validity | Scientifically sound, feasible, usable | Two significance tests, honest limits, checks against GISTEMP and NSIDC | Fill `VALIDATION.md` with real numbers; test on a second machine |
+| Relevance | Directly addresses the challenge, NASA data is core | Maps to all four challenge objectives; MERRA-2 is the only data source | Name MERRA-2 and GES DISC in the demo, not just the description |
+| Presentation | Clear story, structured, compelling demo and full project | Demo script and slide plan in `DEMO_SCRIPT.md` | Record it; keep to the 30-second or 7-slide limit |
+
+The guide says the project page is "the page that the judges will review" and that more information helps judges rate it, so fill every field fully rather than minimally.
