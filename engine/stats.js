@@ -314,8 +314,8 @@ export function displayUnits(units) {
   return { factor: 1, label: u };
 }
 
-function withUnits(x, label) {
-  return label ? `${fmt(x)} ${label}` : fmt(x);
+function withUnits(x, label, sig = 2) {
+  return label ? `${fmt(x, sig)} ${label}` : fmt(x, sig);
 }
 
 // Plain-language verdict built from linearTrend and mannKendall results.
@@ -345,8 +345,11 @@ export function verdict(trend, mk, units) {
 
   const level = significanceLevel(trend.p, mk.pAutocorr);
   const direction = perDecade > 0 ? "rising" : perDecade < 0 ? "falling" : "flat";
-  const rate = withUnits(Math.abs(perDecade) * factor, label);
-  const range = `${fmt(ci[0] * factor)} to ${fmt(ci[1] * factor)}`;
+  // Enough significant figures that the two ends of the range differ.
+  let sig = 2;
+  while (sig < 4 && fmt(ci[0] * factor, sig) === fmt(ci[1] * factor, sig)) sig++;
+  const rate = withUnits(Math.abs(perDecade) * factor, label, sig);
+  const range = `${fmt(ci[0] * factor, sig)} to ${fmt(ci[1] * factor, sig)}`;
   const ps = `t-test ${fmtP(trend.p)}, Mann-Kendall ${fmtP(mk.pAutocorr)}`;
   const years = `${n} years`;
 

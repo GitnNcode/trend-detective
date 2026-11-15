@@ -73,9 +73,9 @@ export function sampleRoute(route, grid, { greatCircle = false } = {}) {
 // reported.
 //   openMonths[y]      number of open months in years[y]
 //   openMonthList[y]   which months (1..12) were open
-//   chokePointIndex    index into `samples` of the point that most often
-//                      blocks the route (highest value in a closed month);
-//                      -1 if the route was never blocked or has no samples
+//   chokePointIndex    index into `samples` of the point that blocks the
+//                      route in the most months (value above max); -1 if the
+//                      route was never blocked or has no samples
 export function routeOpen(v, route, opts = {}) {
   const max = opts.max ?? 0.15;
   const { entry } = v;
@@ -86,16 +86,14 @@ export function routeOpen(v, route, opts = {}) {
   const blockCount = new Int32Array(samples.length);
   for (let t = 0; t < entry.nt; t++) {
     const { year, month } = monthOfIndex(y0, m0, t);
-    let valid = 0, open = true, worst = -Infinity, worstK = -1;
+    let valid = 0, open = true;
     for (let k = 0; k < samples.length; k++) {
       const val = v.value(t, samples[k].i, samples[k].j);
       if (val !== val) continue;
       valid++;
-      if (val > max) open = false;
-      if (val > worst) { worst = val; worstK = k; }
+      if (val > max) { open = false; blockCount[k]++; }
     }
     if (valid === 0) open = false;
-    else if (!open) blockCount[worstK]++;
     if (!byYear.has(year)) byYear.set(year, { n: 0, open: [] });
     const rec = byYear.get(year);
     rec.n++;
