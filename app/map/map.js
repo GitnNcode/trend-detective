@@ -128,7 +128,8 @@ export class MapView {
     } else if (this.kind === "flat") {
       target = global || span >= 359 ? { lon: 0, lat: span >= 359 ? clamp(latMid, -60, 60) * (latSpan < 120 ? 1 : 0) : 0, zoom: global ? 1 : clamp(180 / (latSpan * 1.25), 1, 3) } : { lon: lonMid, lat: latMid, zoom: clamp(Math.min(360 / (span * 1.5), 180 / (latSpan * 1.6)), 1, 9) };
     } else {
-      target = { lon: span >= 359 ? 0 : lonMid, zoom: clamp(30 / Math.max(10, 90 - Math.abs(latMin)), 0.8, 2.2) };
+      const edge = this.polarSouth ? Math.abs(latMax) : Math.abs(latMin);
+      target = { lon: span >= 359 ? 0 : lonMid, zoom: clamp(44 / Math.max(10, 90 - edge), 0.95, 2.6) };
     }
     if (animate) this.flyTo(target); else { this.view = { ...this.view, ...target }; this.baseDirty = true; this.requestRender(); }
   }

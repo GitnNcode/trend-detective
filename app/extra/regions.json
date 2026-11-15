@@ -1,12 +1,101 @@
 [
-  { "id": "nhem", "name": "Northern Hemisphere", "type": "hemisphere", "latMin": 0, "latMax": 90, "lonMin": -180, "lonMax": 180 },
-  { "id": "tropics60", "name": "Tropics and subtropics", "type": "hemisphere", "latMin": -60, "latMax": 60, "lonMin": -180, "lonMax": 180 },
-  { "id": "europe", "name": "Europe", "type": "continent", "latMin": 35, "latMax": 72, "lonMin": -12, "lonMax": 45 },
-  { "id": "north_america", "name": "North America", "type": "continent", "latMin": 20, "latMax": 70, "lonMin": -130, "lonMax": -60 },
-  { "id": "eurasia", "name": "Northern Eurasia", "type": "continent", "latMin": 30, "latMax": 80, "lonMin": -10, "lonMax": 140 },
-  { "id": "warm_pool", "name": "Indo-Pacific warm pool", "type": "ocean", "latMin": -25, "latMax": 25, "lonMin": 40, "lonMax": -100 },
-  { "id": "afr_asia_heat", "name": "Africa to South Asia", "type": "desert", "latMin": 0, "latMax": 45, "lonMin": -20, "lonMax": 90 },
-  { "id": "trop_atlantic", "name": "Tropical Atlantic and West Africa", "type": "ocean", "latMin": -15, "latMax": 25, "lonMin": -60, "lonMax": 20 },
-  { "id": "sahara_wide", "name": "Sahara and Arabia", "type": "desert", "latMin": 0, "latMax": 38, "lonMin": -20, "lonMax": 55 },
-  { "id": "arctic50", "name": "Arctic Ocean and seas", "type": "polar", "latMin": 50, "latMax": 90, "lonMin": -180, "lonMax": 180 }
+  {
+    "id": "nhem",
+    "name": "Northern Hemisphere",
+    "type": "hemisphere",
+    "latMin": 0,
+    "latMax": 90,
+    "lonMin": -180,
+    "lonMax": 180
+  },
+  {
+    "id": "tropics60",
+    "name": "Tropics and subtropics",
+    "type": "hemisphere",
+    "latMin": -60,
+    "latMax": 60,
+    "lonMin": -180,
+    "lonMax": 180
+  },
+  {
+    "id": "europe",
+    "name": "Europe",
+    "type": "continent",
+    "latMin": 35,
+    "latMax": 72,
+    "lonMin": -12,
+    "lonMax": 45
+  },
+  {
+    "id": "north_america",
+    "name": "North America",
+    "type": "continent",
+    "latMin": 20,
+    "latMax": 70,
+    "lonMin": -130,
+    "lonMax": -60
+  },
+  {
+    "id": "eurasia",
+    "name": "Northern Eurasia",
+    "type": "continent",
+    "latMin": 30,
+    "latMax": 80,
+    "lonMin": -10,
+    "lonMax": 140
+  },
+  {
+    "id": "warm_pool",
+    "name": "Indo-Pacific warm pool",
+    "type": "ocean",
+    "latMin": -25,
+    "latMax": 25,
+    "lonMin": 40,
+    "lonMax": -100
+  },
+  {
+    "id": "afr_asia_heat",
+    "name": "Africa to South Asia",
+    "type": "desert",
+    "latMin": 0,
+    "latMax": 45,
+    "lonMin": -20,
+    "lonMax": 90
+  },
+  {
+    "id": "trop_atlantic",
+    "name": "Tropical Atlantic and West Africa",
+    "type": "ocean",
+    "latMin": -15,
+    "latMax": 25,
+    "lonMin": -60,
+    "lonMax": 20
+  },
+  {
+    "id": "sahara_wide",
+    "name": "Sahara and Arabia",
+    "type": "desert",
+    "latMin": 0,
+    "latMax": 38,
+    "lonMin": -20,
+    "lonMax": 55
+  },
+  {
+    "id": "arctic50",
+    "name": "Arctic Ocean and seas",
+    "type": "polar",
+    "latMin": 50,
+    "latMax": 90,
+    "lonMin": -180,
+    "lonMax": 180
+  },
+  {
+    "id": "west_africa",
+    "name": "West Africa and the Gulf of Guinea",
+    "type": "desert",
+    "latMin": 0,
+    "latMax": 25,
+    "lonMin": -20,
+    "lonMax": 40
+  }
 ]

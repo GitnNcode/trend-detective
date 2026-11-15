@@ -1,19 +1,341 @@
 [
-  { "id": "freezing_line", "prompt": "Where is the winter freezing line going?", "variable": "t2m", "region": "nhem", "months": [12, 1, 2], "mode": "band", "band": { "min": null, "max": 0 } },
-  { "prompt": "Is Europe's 10 °C climate marching north?", "variable": "t2m", "region": "europe", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "band", "band": { "min": 10, "max": null } },
-  { "prompt": "Is the ocean's hottest water spreading?", "variable": "t2m", "region": "warm_pool", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "band", "band": { "min": 28, "max": null } },
-  { "prompt": "Are the tropics getting wider?", "variable": "t2m", "region": "tropics60", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "band", "band": { "min": 25, "max": null } },
-  { "prompt": "Is the summer extreme-heat zone growing?", "variable": "t2m", "region": "afr_asia_heat", "months": [6, 7, 8], "mode": "band", "band": { "min": 32, "max": null } },
-  { "prompt": "Is the tropical rain belt moving north?", "variable": "precip", "region": "trop_atlantic", "months": [6, 7, 8], "mode": "band", "band": { "min": 6, "max": null }, "showDipole": true },
-  { "prompt": "Is the Sahara growing?", "variable": "precip", "region": "sahara_wide", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "band", "band": { "min": null, "max": 0.7 } },
-  { "prompt": "Is spring snow retreating across Eurasia?", "variable": "snow", "region": "eurasia", "months": [3, 4, 5], "mode": "band", "band": { "min": 10, "max": null } },
-  { "prompt": "Is the summer ice pack shrinking toward the pole?", "variable": "seaice", "region": "arctic50", "months": [9], "mode": "band", "band": { "min": 0.15, "max": null }, "showRings": true },
-  { "prompt": "Is the cold air 5 km up shrinking?", "variable": "t500", "region": "nhem", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "band", "band": { "min": null, "max": -20 } },
-  { "prompt": "How fast is climate moving across the planet?", "variable": "t2m", "region": "global", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "flow" },
-  { "prompt": "Which way are rain patterns moving?", "variable": "precip", "region": "global", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "flow" },
-  { "prompt": "Where did Chicago's 1980s climate go?", "variable": "t2m", "region": "global", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "twin", "twin": { "lat": 41.88, "lon": -87.63, "name": "Chicago" } },
-  { "prompt": "Where did Madrid's 1980s climate go?", "variable": "t2m", "region": "global", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "twin", "twin": { "lat": 40.42, "lon": -3.7, "name": "Madrid" } },
-  { "prompt": "What is changing most in the Arctic?", "variable": "t2m", "region": "arctic", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "lineup" },
-  { "prompt": "What is changing most in the Sahel's rainy season?", "variable": "precip", "region": "sahel", "months": [7, 8, 9], "mode": "lineup" },
-  { "prompt": "Which variables are changing worldwide, and where?", "variable": "t2m", "region": "global", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "mode": "atlas" }
+  {
+    "id": "freezing_line",
+    "prompt": "Where is the winter freezing line going?",
+    "variable": "t2m",
+    "region": "nhem",
+    "months": [
+      12,
+      1,
+      2
+    ],
+    "mode": "band",
+    "band": {
+      "min": null,
+      "max": 0
+    }
+  },
+  {
+    "prompt": "Is Europe's 10 °C climate marching north?",
+    "variable": "t2m",
+    "region": "europe",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "band",
+    "band": {
+      "min": 10,
+      "max": null
+    }
+  },
+  {
+    "prompt": "Is the ocean's hottest water spreading?",
+    "variable": "t2m",
+    "region": "warm_pool",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "band",
+    "band": {
+      "min": 28,
+      "max": null
+    },
+    "showTrack": true
+  },
+  {
+    "prompt": "Are the tropics getting wider?",
+    "variable": "t2m",
+    "region": "tropics60",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "band",
+    "band": {
+      "min": 25,
+      "max": null
+    }
+  },
+  {
+    "prompt": "Is the summer extreme-heat zone growing?",
+    "variable": "t2m",
+    "region": "afr_asia_heat",
+    "months": [
+      6,
+      7,
+      8
+    ],
+    "mode": "band",
+    "band": {
+      "min": 32,
+      "max": null
+    },
+    "showTrack": true
+  },
+  {
+    "prompt": "Is the West African rain belt moving north?",
+    "variable": "precip",
+    "region": "west_africa",
+    "months": [
+      7,
+      8,
+      9
+    ],
+    "mode": "band",
+    "band": {
+      "min": 2,
+      "max": null
+    },
+    "showDipole": true
+  },
+  {
+    "prompt": "Is the Sahara growing?",
+    "variable": "precip",
+    "region": "sahara_wide",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "band",
+    "band": {
+      "min": null,
+      "max": 0.7
+    }
+  },
+  {
+    "prompt": "Is spring snow retreating across Eurasia?",
+    "variable": "snow",
+    "region": "eurasia",
+    "months": [
+      3,
+      4,
+      5
+    ],
+    "mode": "band",
+    "band": {
+      "min": 10,
+      "max": null
+    }
+  },
+  {
+    "prompt": "Is the summer ice pack shrinking toward the pole?",
+    "variable": "seaice",
+    "region": "arctic50",
+    "months": [
+      9
+    ],
+    "mode": "band",
+    "band": {
+      "min": 0.15,
+      "max": null
+    },
+    "showRings": true
+  },
+  {
+    "prompt": "Is the cold air 5 km up shrinking?",
+    "variable": "t500",
+    "region": "nhem",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "band",
+    "band": {
+      "min": null,
+      "max": -20
+    }
+  },
+  {
+    "prompt": "How fast is climate moving across the planet?",
+    "variable": "t2m",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "flow"
+  },
+  {
+    "prompt": "Which way are rain patterns moving?",
+    "variable": "precip",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "flow"
+  },
+  {
+    "prompt": "Where did Chicago's 1980s climate go?",
+    "variable": "t2m",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "twin",
+    "twin": {
+      "lat": 41.88,
+      "lon": -87.63,
+      "name": "Chicago"
+    }
+  },
+  {
+    "prompt": "Where did Madrid's 1980s climate go?",
+    "variable": "t2m",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "twin",
+    "twin": {
+      "lat": 40.42,
+      "lon": -3.7,
+      "name": "Madrid"
+    }
+  },
+  {
+    "prompt": "What is changing most in the Arctic?",
+    "variable": "t2m",
+    "region": "arctic",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "lineup"
+  },
+  {
+    "prompt": "What is changing most in the Sahel's rainy season?",
+    "variable": "precip",
+    "region": "sahel",
+    "months": [
+      7,
+      8,
+      9
+    ],
+    "mode": "lineup"
+  },
+  {
+    "prompt": "Which variables are changing worldwide, and where?",
+    "variable": "t2m",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "atlas"
+  }
 ]

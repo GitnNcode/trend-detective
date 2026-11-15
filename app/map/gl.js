@@ -157,7 +157,7 @@ void main() {
     float tq = u_levels > 0.5 ? (min(floor(f), u_levels - 1.0) + 0.5) / u_levels : t;
     vec3 c = texture(u_cmap, vec2(tq, 0.5)).rgb;
     if (u_gray > 0.5) c = vec3(mix(0.96, 0.6, tq));
-    if (u_contours > 0.5 && u_levels > 0.5 && u_cells < 0.5) {
+    if (u_contours > 0.5 && u_levels > 0.5 && u_cells < 0.5 && u_gray < 0.5) {
       float g = fract(f);
       float d = min(g, 1.0 - g) / max(fwidth(f), 1e-6);
       c = mix(c, c * 0.45, lineAA(d, 0.5 * lw) * step(0.001, t) * step(t, 0.999));

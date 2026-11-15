@@ -4,7 +4,7 @@
 
 import * as E from "../../engine/index.js";
 import * as D from "../data.js";
-import { VARS, varStyle, trendRamp, stepColor, rampColor, RAMPS } from "../palettes.js";
+import { VARS, varStyle, trendRamp, stepColor, rampColor, RAMPS, zoneSoft } from "../palettes.js";
 import { app, actions, MODES, regionOf, monthsLabel, defOf, unitsOf, frameYear, setTime, setPlaying, seasonCode } from "../main.js";
 import { exportPlot } from "./export.js";
 
@@ -65,6 +65,8 @@ export function renderMenubar() {
       { label: "Arrived / left areas", mark: check(s.showDipole), act: () => actions.toggle("showDipole") },
       { sep: true }, { hdr: "Trend" },
       { label: "Hatch p ≥ 0.05", mark: check(s.hatch), act: () => actions.toggle("hatch") },
+      { label: "Remove seasonal cycle", mark: check(s.deseason), act: () => actions.toggle("deseason") },
+      { label: "Monthly values in chart", mark: check(s.showMonthly), act: () => actions.toggle("showMonthly") },
     ] },
     { id: "proc", label: "Procedures", items: [
       { hdr: "Guided" },
@@ -205,7 +207,8 @@ export function updateFrame() {
 
 function staticTime() {
   const s = app.state, f = app.frames;
-  if ((s.mode === "map" && s.layerView === "trend") || s.mode === "flow") return `${Math.floor(f.years[0])}–${Math.floor(f.years[f.n - 1])}`;
+  if (s.mode === "twin") return "1980s → 2016–25";
+  if ((s.mode === "map" && s.layerView === "trend") || s.mode === "flow" || s.mode === "atlas" || s.mode === "lineup") return `${Math.floor(f.years[0])}–${Math.floor(f.years[f.n - 1])}`;
   return null;
 }
 
@@ -264,8 +267,8 @@ export function renderColorbar() {
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
   };
   if (scene.layer === 1 && R.tmapMax) {
-    const tr = trendRamp(s.variable), L = 12, mx = R.tmapMax * 10 * factor;
-    bar(L, (k) => stepColor(tr.ramp, k, L, { flip: tr.flip }), Array.from({ length: L + 1 }, (_, k) => fmtNum(-mx + (2 * mx * k) / L, 2)), `${code(s.variable)} TREND  (${label} / decade)${s.hatch ? "   hatched: p ≥ 0.05" : ""}`);
+    const tr = trendRamp(s.mode === "twin" ? "t2m" : s.variable), L = R.auxLevels ?? 12, mx = R.tmapMax * 10 * (s.mode === "twin" ? 1 : factor);
+    bar(L, (k) => stepColor(tr.ramp, k, L, { flip: tr.flip }), Array.from({ length: L + 1 }, (_, k) => fmtNum(-mx + (2 * mx * k) / L, 2)), `${code(s.variable)} TREND  (${label} / decade)${s.hatch && s.mode !== "twin" ? "   hatched: p ≥ 0.05" : ""}`);
   } else if (scene.layer === 2 && R.flow) {
     const L = 10, s0 = R.flow.medianSpeed || 1, cap = R.flow.cap || 1, lc = Math.log(1 + cap / s0);
     bar(L, (k) => stepColor("speed", k, L), Array.from({ length: L + 1 }, (_, k) => fmtNum((Math.exp((k / L) * lc) - 1) * s0 * 10, 2)), `${code(s.variable)} CLIMATE VELOCITY  (km / decade)   arrows: direction of travel`);
@@ -280,7 +283,7 @@ export function renderColorbar() {
       const labels = Array.from({ length: bins + 1 }, (_, k) => k === bins ? String(Math.floor(yrs[n - 1])) : String(Math.floor(yrs[Math.min(n - 1, Math.floor((k * n) / bins))])));
       bar(bins, (k) => stepColor("rings", k, bins), labels, "EDGE BY YEAR", split, x1);
     } else {
-      const soft = (vs.domain[1] - vs.domain[0]) * 0.12;
+      const soft = zoneSoft(s.variable);
       const b = s.band, base = b.min ?? b.max, dir = b.min != null ? 1 : -1;
       bar(5, (k) => stepColor("zone", k, 5), Array.from({ length: 6 }, (_, k) => fmtNum(base + dir * (soft * k) / 5, 2)), `ZONE (${b.min != null ? "≥" : "≤"} ${fmtNum(base)})`, split, x1);
     }
@@ -317,7 +320,7 @@ export function ensureChart() {
 
 const lamp = (cls, text) => `<span class="lamp ${cls}"><i></i>${text}</span>`;
 const lampOf = (p) => (p < 0.05 ? "sig" : p < 0.1 ? "sug" : "");
-const statusOf = (level) => `<span class="status ${level}">${level === "significant" ? "SIGNIFICANT" : level === "suggestive" ? "SUGGESTIVE" : "NOT SIGNIFICANT"}</span>`;
+const statusOf = (level, sentence = "") => `<span class="status ${level}" title="${esc(sentence)}">${level === "significant" ? "Significant" : level === "suggestive" ? "Suggestive" : "Not significant"}</span>`;
 
 // Confidence-interval whisker: zero line, 95% range, estimate.
 function ciPlot(est, lo, hi) {
@@ -375,7 +378,7 @@ export function renderInspector() {
       <div class="big"><span class="n">${signed(km, 2)}</span><span class="u">km/dec ${Number.isFinite(km) ? (km >= 0 ? "poleward" : "equatorward") : ""}</span></div>
       <div class="big" style="margin-top:6px"><span class="n" style="font-size:17px">${signed(bs.areaPctPerDecade, 2)}</span><span class="u">% area/dec</span></div>
       <div class="lamps">${lamp(lampOf(bs.edgeP), `edge ${pTxt(bs.edgeP)}`)}${lamp(lampOf(bs.areaP), `area ${pTxt(bs.areaP)}`)}<span>n ${R.track.years.length}</span></div>
-      ${statusOf(bs.level)}`;
+      ${statusOf(bs.level, bs.sentence)}`;
     const kind = s.chartKind === "area" ? "area" : "edge";
     ch.innerHTML = `<span>${kind === "edge" ? "Edge latitude" : "Zone area"}</span><span class="seg"><button data-ck="edge" class="${kind === "edge" ? "on" : ""}">Edge</button><button data-ck="area" class="${kind === "area" ? "on" : ""}">Area</button></span>`;
     spec = kind === "edge"
@@ -391,7 +394,7 @@ export function renderInspector() {
     A.innerHTML = `<div class="ihdr">Open months <span class="r">${esc(R.route.name)}</span></div>
       <div class="big"><span class="n">${signed(vd.perDecade, 2)}</span><span class="u">months/dec</span></div>
       ${ciPlot(vd.perDecade, vd.ci95PerDecade[0], vd.ci95PerDecade[1])}
-      <div class="lamps">${lamp(lampOf(vd.pT), `t ${pTxt(vd.pT)}`)}${lamp(lampOf(vd.pMK), `MK ${pTxt(vd.pMK)}`)}<span>n ${vd.n}</span></div>${statusOf(vd.level)}`;
+      <div class="lamps">${lamp(lampOf(vd.pT), `t ${pTxt(vd.pT)}`)}${lamp(lampOf(vd.pMK), `MK ${pTxt(vd.pMK)}`)}<span>n ${vd.n}</span></div>${statusOf(vd.level, vd.sentence.replace(/percentage points/g, "months"))}`;
     ch.innerHTML = `<span>Open months per year</span><span class="r">${monthsLabel(ro.months)}</span>`;
     spec = { kind: "bars", years: ro.years, values: ro.openMonths, max: ro.months.length, units: "mo", fit: true, color: "#1f6fb2", format: (v) => `${v}/${ro.months.length} mo` };
     B.innerHTML = detectionBlock(R.routeDetection);
@@ -460,7 +463,15 @@ function seriesSpec(s, R, factor, label) {
   const det = R.detection;
   const pending = det && det.status === "pending" && det.etaYear < 2100;
   let monthly = null;
-  if (s.months.length === 12) monthly = { x: R.rs.t.map((t) => Number(t.slice(0, 4)) + (Number(t.slice(5, 7)) - 0.5) / 12), values: Array.from(R.rs.values) };
+  if (s.showMonthly) {
+    const src = s.deseason ? R.ds : R.rs;
+    const sel = new Set(s.months);
+    const x = [], vals = [];
+    src.t.forEach((t, k) => { if (sel.has(Number(t.slice(5, 7)))) { x.push(Number(t.slice(0, 4)) + (Number(t.slice(5, 7)) - 0.5) / 12); vals.push(src.values[k]); } });
+    // Anomalies are drawn around the annual mean so both share one axis.
+    const off = s.deseason ? meanOf(Array.from(R.annual.values)) - meanOf(vals) : 0;
+    monthly = { x, values: vals.map((v) => v + off) };
+  }
   return { kind: "series", years: R.annual.years, values: R.annual.values, monthly, units: unitsOf(s.variable), fit: true, color: "#1a1a1a", format: (v) => `${fmtNum(v * factor, 3)} ${label}`, extendTo: pending ? Math.max(det.etaYear + 2, R.annual.years.at(-1) + 5) : undefined, markers: pending ? [{ year: det.etaYear, label: `detectable ~${det.etaYear}`, color: "#d62728" }] : [] };
 }
 
@@ -484,10 +495,11 @@ function trendBlock(R, factor, label) {
     <div class="big"><span class="n">${signed(vd.perDecade * factor, 2)}</span><span class="u">${esc(label)}/dec</span></div>
     ${ciPlot(vd.perDecade * factor, vd.ci95PerDecade[0] * factor, vd.ci95PerDecade[1] * factor)}
     <div class="lamps">${lamp(lampOf(vd.pT), `t ${pTxt(vd.pT)}`)}${lamp(lampOf(vd.pMK), `MK ${pTxt(vd.pMK)}`)}<span>n ${vd.n}</span></div>
-    ${statusOf(vd.level)}`;
+    ${statusOf(vd.level, vd.sentence)}`;
 }
 
 const row = (lab, a, b) => `<tr><td>${lab}</td><td>${fmtNum(a, 3)}</td><td>${fmtNum(b, 3)}</td><td class="${b - a > 0 ? "up" : "down"}">${signed(b - a, 2)}</td></tr>`;
+const meanOf = (a) => { const f = a.filter(Number.isFinite); return f.length ? f.reduce((x, y) => x + y, 0) / f.length : 0; };
 const avg = (a) => { const f = a.filter(Number.isFinite); return f.length ? f.reduce((x, y) => x + y, 0) / f.length : NaN; };
 
 function dipoleBars(st, factor, label) {
@@ -567,7 +579,7 @@ export function renderStatus() {
   const R = app.R;
   if (!R.v) return;
   const e = R.v.entry, g = e.grid;
-  $("#statusbar").innerHTML = `<span id="stCursor">—</span><span id="stFrame"></span><span>${esc(e.source.split(",")[0])} · ${g.dlat}°×${g.dlon}° · ${(g.nlat * g.nlon).toLocaleString("en-US")} cells × ${e.nt} mo</span><span id="stMeter"></span>`;
+  $("#statusbar").innerHTML = `<span id="stCursor">—</span><span id="stFrame"></span><span>${esc(e.source.split(",")[0])} · ${g.dlat}°×${g.dlon}° · ${(g.nlat * g.nlon).toLocaleString("en-US")} cells × ${e.nt} mo</span><span id="stMeter"></span><span>Code written with Claude, reviewed by the team · not affiliated with NASA</span>`;
   updateMeter();
   updateFrame();
 }

@@ -84,7 +84,11 @@ function miniPlot(cv, years, values, trend) {
   ctx.fillStyle = "#333";
   ctx.font = FONT;
   ctx.textAlign = "center";
-  for (const yr of [1980, 2000, 2020]) if (yr >= years[0] && yr <= years.at(-1)) { ctx.fillText(String(yr), x(yr), H - 3); ctx.fillRect(Math.round(x(yr)), B + 3, 1, -4); }
+  for (const yr of [1980, 2000, 2020]) if (yr >= years[0] && yr <= years.at(-1)) {
+    ctx.textAlign = x(yr) < 20 ? "left" : x(yr) > W - 20 ? "right" : "center";
+    ctx.fillText(String(yr), x(yr) < 20 ? 2 : x(yr), H - 3);
+    ctx.fillRect(Math.round(x(yr)), B + 3, 1, -4);
+  }
 }
 
 function atlas(app, el) {

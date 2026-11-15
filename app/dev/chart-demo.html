@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chart.js dev page</title>
+<!-- Dev-only test page for app/chart.js. Written with Claude and reviewed by the team. -->
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; background: #ffffff; color: #222; font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .note { color: #666; margin: 0 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 16px; }
+  .card { border: 1px solid #d9d9d9; padding: 12px 12px 10px; min-width: 0; }
+  .card h2 { font-size: 12px; font-weight: 600; margin: 0 0 8px; color: #333; }
+  .wide { grid-column: 1 / -1; }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  button { font: inherit; font-size: 12px; padding: 3px 8px; border: 1px solid #999; background: #f7f7f7; color: #222; cursor: pointer; }
+  button:hover { background: #eee; }
+  .resizable { resize: horizontal; overflow: hidden; width: 70%; min-width: 120px; max-width: 100%; border: 1px dashed #bbb; padding: 4px; box-sizing: border-box; }
+  .sparks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .spark { border: 1px solid #e3e3e3; padding: 8px; min-width: 0; }
+  .spark span { display: block; font-size: 11px; color: #666; margin-bottom: 4px; }
+  .spark canvas { display: block; width: 100%; }
+  .swatches { display: flex; gap: 2px; margin-top: 8px; }
+  .swatches i { flex: 1; height: 10px; }
+  #log { font: 11px ui-monospace, Menlo, monospace; color: #444; height: 120px; overflow: auto; border: 1px solid #e3e3e3; padding: 6px; white-space: pre; }
+</style>
+</head>
+<body>
+<main>
+  <h1>chart.js dev page</h1>
+  <p class="note">Synthetic data only. Hover a chart for the readout; click or drag to "seek" (moves every playhead); with a chart focused, arrow keys read values and Enter seeks. Charts are on <code>window.charts</code>.</p>
+  <div class="grid">
+    <section class="card wide">
+      <h2>Series: warming anomaly, monthly + annual, OLS fit with 95% band, extendTo, "Detectable" marker</h2>
+      <div id="cSeries"></div>
+      <div class="bar">
+        <button id="bNew">New random data</button>
+        <button id="bVar">Next variable</button>
+        <button id="bMonthly">Toggle monthly</button>
+        <button id="bExtend">Toggle extendTo + marker</button>
+        <button id="bRef">Toggle refLine</button>
+        <button id="bCursor">Random cursor</button>
+        <button id="bPlay">Play cursor (monthly steps)</button>
+        <button id="bNull">Cursor null</button>
+        <button id="bRapid">10 rapid updates</button>
+        <button id="bEdge">Next edge case</button>
+      </div>
+    </section>
+    <section class="card"><h2>Bars: open months per year (max 4), fit</h2><div id="cBars"></div><div class="bar"><button id="bBars">New data</button></div></section>
+    <section class="card"><h2>Seasonal: 1980–1989 vs 2015–2024</h2><div id="cSeasonal"></div><div class="bar"><button id="bSeas">New data</button></div></section>
+    <section class="card"><h2>Stripes: temp</h2><div id="cStripesT"></div><div class="swatches" id="swT"></div></section>
+    <section class="card"><h2>Stripes: wet</h2><div id="cStripesW"></div><div class="swatches" id="swW"></div></section>
+    <section class="card"><h2>Stripes: ice</h2><div id="cStripesI"></div><div class="swatches" id="swI"></div></section>
+    <section class="card"><h2>Resize: drag the dashed box's corner</h2><div class="resizable"><div id="cResize"></div></div><div class="bar"><button id="bResizeNew">New data (morph while resizing)</button></div></section>
+    <section class="card wide"><h2>Sparklines (drawSparkline)</h2><div class="sparks" id="sparks"></div></section>
+    <section class="card wide"><h2>Event log</h2><div id="log"></div></section>
+  </div>
+</main>
+<script type="module">
+import { createChart, drawSparkline, stripeColor } from "../chart.js";
+
+// ---- seeded random numbers, so a reload shows the same first picture
+let seed = 7;
+function rand() {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function gauss() { let u = 0; while (!u) u = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rand()); }
+const YEARS = Array.from({ length: 45 }, (_, i) => 1980 + i);
+
+// Annual values plus a matching monthly line (deseasonalized), 1993 missing.
+function synth({ base, trend, noise, mnoise, gap = true }) {
+  const mx = [], mv = [];
+  const annual = YEARS.map((y) => {
+    const yr = base + trend * (y - 1980) + noise * (0.7 * Math.sin((y - 1980) * 0.9 + rand()) + gauss());
+    let sum = 0;
+    for (let m = 1; m <= 12; m++) {
+      const v = yr + mnoise * gauss();
+      mx.push(y + (m - 0.5) / 12);
+      mv.push(v);
+      sum += v;
+    }
+    return sum / 12;
+  });
+  if (gap) {
+    const k = YEARS.indexOf(1993);
+    annual[k] = NaN;
+    for (let m = 0; m < 12; m++) mv[k * 12 + m] = NaN;
+  }
+  return { annual, monthly: { x: mx, values: mv } };
+}
+
+const VARIABLES = [
+  { name: "temperature anomaly", units: "°C", gen: () => synth({ base: -0.3, trend: 0.022, noise: 0.1, mnoise: 0.16 }) },
+  { name: "sea ice area (huge numbers)", units: "km²", color: "#1f77b4", gen: () => synth({ base: 7.4e6, trend: -6.5e4, noise: 2.5e5, mnoise: 3e5 }) },
+  { name: "precipitation flux (tiny numbers)", units: "kg/m²/s", color: "#2ca02c", gen: () => synth({ base: 3.1e-5, trend: 4e-8, noise: 1.2e-6, mnoise: 2e-6 }) },
+  { name: "edge latitude (invertY, custom format)", units: "° latitude", color: "#9467bd", invertY: true,
+    format: (v) => `${Math.abs(v).toFixed(1)}°${v >= 0 ? "N" : "S"}`, gen: () => synth({ base: 71.5, trend: 0.035, noise: 0.35, mnoise: 0.5 }) },
+];
+
+const log = document.getElementById("log");
+function note(text) {
+  log.textContent += text + "\n";
+  log.scrollTop = log.scrollHeight;
+}
+
+const charts = {};
+window.charts = charts;
+function make(id, height) {
+  const c = createChart(document.getElementById(id), { height });
+  c.onHover((year, info) => { if (year != null) note(`${id} hover ${year}  value=${info.value}  fit=${info.fit}`); });
+  c.onClick((year) => { note(`${id} click ${year}`); setAllCursors(year); });
+  charts[id] = c;
+  return c;
+}
+function setAllCursors(y) { for (const c of Object.values(charts)) c.setCursor(y); }
+
+// ---- series
+const series = make("cSeries", 260);
+const opt = { v: 0, monthly: true, extend: true, ref: false };
+let data = VARIABLES[0].gen();
+function seriesSpec() {
+  const V = VARIABLES[opt.v];
+  const det = 2028 + Math.floor(rand() * 14);
+  return {
+    kind: "series", years: YEARS, values: data.annual, units: V.units, color: V.color, format: V.format, invertY: V.invertY,
+    monthly: opt.monthly ? data.monthly : null, fit: true,
+    extendTo: opt.extend ? det + 6 : undefined,
+    markers: opt.extend ? [{ year: det, label: `Detectable ≈ ${det}`, color: "#ffb020" }] : [],
+    refLine: opt.ref ? { value: V.units === "°C" ? 0.5 : data.annual[0], label: V.units === "°C" ? "+0.5 °C threshold" : "1980 level" } : null,
+    emptyText: "No data in this region",
+  };
+}
+const drawSeries = () => series.update(seriesSpec());
+drawSeries();
+series.setCursor(2012);
+
+const on = (id, fn) => document.getElementById(id).addEventListener("click", fn);
+on("bNew", () => { data = VARIABLES[opt.v].gen(); drawSeries(); });
+on("bVar", () => { opt.v = (opt.v + 1) % VARIABLES.length; data = VARIABLES[opt.v].gen(); drawSeries(); note(`variable: ${VARIABLES[opt.v].name}`); });
+on("bMonthly", () => { opt.monthly = !opt.monthly; drawSeries(); });
+on("bExtend", () => { opt.extend = !opt.extend; drawSeries(); });
+on("bRef", () => { opt.ref = !opt.ref; drawSeries(); });
+on("bCursor", () => setAllCursors(1980 + Math.floor(rand() * 45)));
+on("bNull", () => setAllCursors(null));
+let playing = 0;
+on("bPlay", () => {
+  if (playing) { cancelAnimationFrame(playing); playing = 0; return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    const y = 1980 + Math.floor(((now - t0) / 1000) * 7 * 12) / 12; // 7 years per second, monthly steps
+    if (y > 2024 + 11 / 12) { playing = 0; return; }
+    setAllCursors(y);
+    playing = requestAnimationFrame(step);
+  };
+  playing = requestAnimationFrame(step);
+});
+on("bRapid", () => {
+  let k = 0;
+  const tick = () => { data = VARIABLES[opt.v].gen(); drawSeries(); if (++k < 10) setTimeout(tick, 25); };
+  tick();
+});
+const EDGES = [
+  ["single year", { kind: "series", years: [2012], values: [3.56e6], units: "km²", fit: true }],
+  ["all NaN", { kind: "series", years: YEARS, values: YEARS.map(() => NaN), units: "°C", emptyText: "No data in this region" }],
+  ["negative only, gaps", { kind: "series", years: YEARS, values: YEARS.map((y, i) => (i % 9 === 4 ? NaN : -40 + 0.05 * (y - 1980) + gauss())), units: "°C", fit: true }],
+  ["constant values", { kind: "series", years: YEARS, values: YEARS.map(() => 2.5), units: "m/s", fit: true }],
+  ["two years", { kind: "series", years: [2000, 2001], values: [1, 2], units: "%", fit: true }],
+  ["empty arrays", { kind: "series", years: [], values: [], emptyText: "No data in this region" }],
+];
+let edge = 0;
+on("bEdge", () => {
+  if (edge === EDGES.length) { edge = 0; drawSeries(); note("edge case: back to normal"); return; }
+  const [name, spec] = EDGES[edge++];
+  series.update(spec);
+  note(`edge case: ${name}`);
+});
+
+// ---- bars
+const bars = make("cBars", 200);
+const barsSpec = () => ({
+  kind: "bars", years: YEARS, max: 4, units: "months", color: "#1f77b4", fit: true,
+  values: YEARS.map((y) => Math.max(0, Math.min(4, Math.round(0.2 + 0.07 * (y - 1980) + 0.8 * gauss())))),
+  format: (v) => `${v} of 4 months`,
+});
+bars.update(barsSpec());
+on("bBars", () => bars.update(barsSpec()));
+
+// ---- seasonal
+const seasonal = make("cSeasonal", 200);
+const seasSpec = () => {
+  const early = Array.from({ length: 12 }, (_, i) => -8 + 22 * Math.sin(((i - 3) / 12) * 2 * Math.PI) * 0.5 + 6 + gauss() * 0.4);
+  const late = early.map((v, i) => v + 0.9 + 1.2 * Math.cos((i / 12) * 2 * Math.PI) + gauss() * 0.3);
+  return { kind: "seasonal", months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], early, late, earlyLabel: "1980–1989", lateLabel: "2015–2024", units: "°C" };
+};
+seasonal.update(seasSpec());
+on("bSeas", () => seasonal.update(seasSpec()));
+
+// ---- stripes
+const stripeData = {
+  temp: () => synth({ base: 14, trend: 0.025, noise: 0.12, mnoise: 0.1 }).annual,
+  wet: () => YEARS.map((y) => 2.6 + 0.004 * (y - 1980) + 0.18 * gauss()),
+  ice: () => synth({ base: 7.2e6, trend: -7e4, noise: 3e5, mnoise: 2e5, gap: false }).annual,
+};
+const stripes = [["cStripesT", "temp", "°C"], ["cStripesW", "wet", "mm/day"], ["cStripesI", "ice", "km²"]].map(([id, palette, units]) => {
+  const c = make(id, 110);
+  c.update({ kind: "stripes", years: YEARS, values: stripeData[palette](), palette, units });
+  return c;
+});
+for (const [id, palette] of [["swT", "temp"], ["swW", "wet"], ["swI", "ice"]]) {
+  const el = document.getElementById(id);
+  for (let k = -10; k <= 10; k++) {
+    const i = document.createElement("i");
+    i.style.background = stripeColor(k / 10, palette);
+    i.title = `stripeColor(${k / 10}, "${palette}")`;
+    el.appendChild(i);
+  }
+}
+
+// ---- resize test
+const resizeChart = make("cResize", 180);
+const resizeSpec = () => ({ kind: "series", years: YEARS, values: synth({ base: 0, trend: 0.02, noise: 0.15, mnoise: 0.2 }).annual, units: "°C", fit: true, color: "#d62728" });
+resizeChart.update(resizeSpec());
+on("bResizeNew", () => resizeChart.update(resizeSpec()));
+
+// ---- sparklines
+const SPARKS = [
+  ["warming, default colour", synth({ base: 0, trend: 0.02, noise: 0.1, mnoise: 0.1 }).annual, {}],
+  ["sea ice, blue", synth({ base: 7e6, trend: -6e4, noise: 2e5, mnoise: 1e5, gap: false }).annual, { color: "#1f77b4" }],
+  ["rain, no fit", YEARS.map(() => 2.5 + 0.3 * gauss()), { color: "#2ca02c", fit: false }],
+  ["with NaN gaps", YEARS.map((y, i) => (i % 7 === 3 ? NaN : Math.sin(i / 4) + 0.03 * i)), { color: "#9467bd" }],
+  ["no end marker", YEARS.map((y, i) => 10 - 0.08 * i + 0.4 * gauss()), { color: "#d62728", highlightLast: false }],
+  ["all NaN", YEARS.map(() => NaN), {}],
+  ["single value", [4.2], {}],
+  ["constant", YEARS.map(() => 1), { color: "#8c564b" }],
+];
+const sparks = document.getElementById("sparks");
+for (const [label, values, opts] of SPARKS) {
+  const box = document.createElement("div");
+  box.className = "spark";
+  const span = document.createElement("span");
+  span.textContent = label;
+  const cv = document.createElement("canvas");
+  box.append(span, cv);
+  sparks.appendChild(box);
+  drawSparkline(cv, values, { ...opts, width: cv.clientWidth || 140, height: 46 });
+}
+
+setAllCursors(2012);
+note("ready");
+</script>
+</body>
+</html>

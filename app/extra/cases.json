@@ -3,32 +3,347 @@
     "id": "climate_on_the_move",
     "title": "Climate on the move",
     "steps": [
-      { "text": "Here is Europe's air temperature, averaged over the whole year since 1980. Each dot is one year. The verdict card tests whether the rise is real: a t-test and a Mann–Kendall test both have to agree.", "action": { "variable": "t2m", "region": "europe", "mode": "series", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } },
-      { "text": "Most tools stop there: one place, one number going up. Now flip it. Instead of fixing the place, fix a value. The orange zone is everywhere the yearly average is 10 °C or warmer. Watch where it goes.", "action": { "variable": "t2m", "region": "europe", "mode": "band", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "band": { "min": 10, "max": null }, "play": true } },
-      { "text": "The dashed blue line is where the 10 °C edge sat in 1980. The faint trail shows the last ten years. The edge has moved north by roughly 100 km every decade, so 10 °C climate now reaches places it never did before.", "action": { "variable": "t2m", "region": "europe", "mode": "band", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "band": { "min": 10, "max": null }, "play": false, "year": 2025 } },
-      { "text": "Tree rings: every year's edge drawn at once, from blue (1980) to gold (2025). Rings packed tightly mean a slow edge; wide gaps mean it ran.", "action": { "variable": "t2m", "region": "europe", "mode": "band", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "band": { "min": 10, "max": null }, "showRings": true } },
-      { "text": "Climate flow: the same idea, everywhere at once. Each streak drifts the way temperatures are moving, and faster streaks mean you would have to travel farther each decade to keep the climate you had.", "action": { "variable": "t2m", "region": "global", "mode": "flow", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } },
-      { "text": "Make it personal. Pick a hometown and we find where its 1980s climate lives today, and where today's climate used to be. Click any city or any spot on land.", "action": { "variable": "t2m", "region": "global", "mode": "twin", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "twin": { "lat": 48.86, "lon": 2.35, "name": "Paris" } } }
+      {
+        "text": "Here is Europe's air temperature, averaged over the whole year since 1980. Each dot is one year. The verdict card tests whether the rise is real: a t-test and a Mann–Kendall test both have to agree.",
+        "action": {
+          "variable": "t2m",
+          "region": "europe",
+          "mode": "series",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      },
+      {
+        "text": "Most tools stop there: one place, one number going up. Now flip it. Instead of fixing the place, fix a value. The orange zone is everywhere the yearly average is 10 °C or warmer. Watch where it goes.",
+        "action": {
+          "variable": "t2m",
+          "region": "europe",
+          "mode": "band",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "band": {
+            "min": 10,
+            "max": null
+          },
+          "play": true
+        }
+      },
+      {
+        "text": "The dashed blue line is where the 10 °C edge sat in 1980. The faint trail shows the last ten years. The edge has moved north by roughly 100 km every decade, so 10 °C climate now reaches places it never did before.",
+        "action": {
+          "variable": "t2m",
+          "region": "europe",
+          "mode": "band",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "band": {
+            "min": 10,
+            "max": null
+          },
+          "play": false,
+          "year": 2025
+        }
+      },
+      {
+        "text": "Tree rings: every year's edge drawn at once, from blue (1980) to gold (2025). Rings packed tightly mean a slow edge; wide gaps mean it ran.",
+        "action": {
+          "variable": "t2m",
+          "region": "europe",
+          "mode": "band",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "band": {
+            "min": 10,
+            "max": null
+          },
+          "showRings": true
+        }
+      },
+      {
+        "text": "Climate flow: the same idea, everywhere at once. Each streak drifts the way temperatures are moving, and faster streaks mean you would have to travel farther each decade to keep the climate you had.",
+        "action": {
+          "variable": "t2m",
+          "region": "global",
+          "mode": "flow",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      },
+      {
+        "text": "Make it personal. Pick a hometown and we find where its 1980s climate lives today, and where today's climate used to be. Click any city or any spot on land.",
+        "action": {
+          "variable": "t2m",
+          "region": "global",
+          "mode": "twin",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "twin": {
+            "lat": 48.86,
+            "lon": 2.35,
+            "name": "Paris"
+          }
+        }
+      }
     ]
   },
   {
     "id": "heat_spot",
     "title": "The spreading hot spot",
     "steps": [
-      { "text": "Over the Indian Ocean and western Pacific sits the warmest water on Earth, the Indo-Pacific warm pool. It fuels monsoons and powers storms. Here is its air temperature since 1980.", "action": { "variable": "t2m", "region": "warm_pool", "mode": "series", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } },
-      { "text": "Now fix a value: air at 28 °C or hotter, averaged over the year. Press play and watch the orange zone. Like a weather map following a storm, the trail shows where it has been.", "action": { "variable": "t2m", "region": "warm_pool", "mode": "band", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "band": { "min": 28, "max": null }, "play": true } },
-      { "text": "The track follows the zone's centre year by year, and the cone shows where it would drift if the 1980 to 2025 trend simply continued. It is not a forecast, just the trend extended.", "action": { "variable": "t2m", "region": "warm_pool", "mode": "band", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "band": { "min": 28, "max": null }, "showTrack": true, "year": 2025 } },
-      { "text": "Check the Area chart in the evidence panel: the 28 °C zone has grown many times over since the early 1980s. The verdict card says whether that growth passes both significance tests.", "action": { "variable": "t2m", "region": "warm_pool", "mode": "band", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "band": { "min": 28, "max": null } } },
-      { "text": "Which other variables are changing here? The lineup tests all ten at once and ranks them by the strength of the evidence. A detective never trusts a single witness.", "action": { "variable": "t2m", "region": "warm_pool", "mode": "lineup", "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } }
+      {
+        "text": "Over the Indian Ocean and western Pacific sits the warmest water on Earth, the Indo-Pacific warm pool. It fuels monsoons and powers storms. Here is its air temperature since 1980.",
+        "action": {
+          "variable": "t2m",
+          "region": "warm_pool",
+          "mode": "series",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      },
+      {
+        "text": "Now fix a value: air at 28 °C or hotter, averaged over the year. Press play and watch the orange zone. Like a weather map following a storm, the trail shows where it has been.",
+        "action": {
+          "variable": "t2m",
+          "region": "warm_pool",
+          "mode": "band",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "band": {
+            "min": 28,
+            "max": null
+          },
+          "play": true,
+          "showTrack": true
+        }
+      },
+      {
+        "text": "The track follows the zone's centre year by year, and the cone shows where it would drift if the 1980 to 2025 trend simply continued. It is not a forecast, just the trend extended.",
+        "action": {
+          "variable": "t2m",
+          "region": "warm_pool",
+          "mode": "band",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "band": {
+            "min": 28,
+            "max": null
+          },
+          "showTrack": true,
+          "year": 2025
+        }
+      },
+      {
+        "text": "Check the Area chart in the evidence panel: the 28 °C zone has grown many times over since the early 1980s. The verdict card says whether that growth passes both significance tests.",
+        "action": {
+          "variable": "t2m",
+          "region": "warm_pool",
+          "mode": "band",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "band": {
+            "min": 28,
+            "max": null
+          },
+          "showTrack": true
+        }
+      },
+      {
+        "text": "Which other variables are changing here? The lineup tests all ten at once and ranks them by the strength of the evidence. A detective never trusts a single witness.",
+        "action": {
+          "variable": "t2m",
+          "region": "warm_pool",
+          "mode": "lineup",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      }
     ]
   },
   {
     "id": "two_trends",
     "title": "One cause, two trends",
     "steps": [
-      { "text": "The challenge's big puzzle: one variable can rise in one region and fall in another, even when the same process drives both. Here is the summer rain trend over the tropical Atlantic and West Africa. Some cells rise, some fall.", "action": { "variable": "precip", "region": "trop_atlantic", "mode": "map", "months": [6, 7, 8] } },
-      { "text": "Now follow the rain belt itself: every place with at least 6 mm of rain a day in summer. Press play. The belt drifts.", "action": { "variable": "precip", "region": "trop_atlantic", "mode": "band", "months": [6, 7, 8], "band": { "min": 6, "max": null }, "play": true } },
-      { "text": "Orange is where the belt arrived (in the zone in the last decade but not the first). Blue is where it left. Where it arrived, rain went up; where it left, rain went down. One moving belt, two opposite local trends.", "action": { "variable": "precip", "region": "trop_atlantic", "mode": "band", "months": [6, 7, 8], "band": { "min": 6, "max": null }, "showDipole": true } }
+      {
+        "text": "The challenge's central puzzle: one variable can rise in one region and fall in a neighbouring one, even when a single process drives both. Here is the trend in summer rain (July to September) over West Africa. Rain rose in some places and fell in others.",
+        "action": {
+          "variable": "precip",
+          "region": "west_africa",
+          "mode": "map",
+          "months": [
+            7,
+            8,
+            9
+          ]
+        }
+      },
+      {
+        "text": "Now follow the rain belt itself: every place that gets at least 2 mm of rain a day in summer. Press play and watch the belt's northern edge.",
+        "action": {
+          "variable": "precip",
+          "region": "west_africa",
+          "mode": "band",
+          "months": [
+            7,
+            8,
+            9
+          ],
+          "band": {
+            "min": 2,
+            "max": null
+          },
+          "play": true
+        }
+      },
+      {
+        "text": "Red hatching is where the belt arrived (inside it in the last decade, not the first): rain went up there, at the edge of the Sahara. Blue is where it left, along the Gulf of Guinea: rain went down there. One belt moved north, so two neighbouring regions show opposite trends.",
+        "action": {
+          "variable": "precip",
+          "region": "west_africa",
+          "mode": "band",
+          "months": [
+            7,
+            8,
+            9
+          ],
+          "band": {
+            "min": 2,
+            "max": null
+          },
+          "showDipole": true
+        }
+      }
     ]
   }
 ]

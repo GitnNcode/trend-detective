@@ -4,7 +4,7 @@
 
 import * as E from "../engine/index.js";
 import * as D from "./data.js";
-import { varStyle, rampLUT, trendRamp } from "./palettes.js";
+import { varStyle, rampLUT, trendRamp, zoneSoft } from "./palettes.js";
 import { MapView } from "./map/map.js";
 import { createStore, toHash, fromHash } from "./state.js";
 import * as W from "./ui/workstation.js";
@@ -29,8 +29,8 @@ const DEFAULTS = {
   mode: "band", variable: "t2m", regionId: "europe", custom: null, months: ALL_MONTHS,
   band: { min: 10, max: null }, route: "nsr", overlayRoute: null, proj: "auto", cadence: "annual",
   layerView: "trend", chartKind: "trend", deseason: true,
-  showTrail: true, showTrack: true, showFirst: true, showRings: false, showDipole: false,
-  twin: null, prompt: null, cells: false, contours: true, coast: true, grid: true, hatch: true,
+  showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
+  twin: null, prompt: null, cells: false, contours: true, coast: true, grid: true, hatch: true, showMonthly: false,
 };
 
 export const app = {
@@ -188,7 +188,8 @@ function autoProjection(s, region) {
 function framingRegion(s, region) {
   if (s.mode === "twin") {
     const h = s.twin ?? defaultTwin();
-    return { latMin: Math.max(-85, h.lat - 22), latMax: Math.min(85, h.lat + 22), lonMin: h.lon - 34, lonMax: h.lon + 34 };
+    const dk = app.R?.twin?.thenNow?.distKm, r = Math.max(8, Math.min(22, ((Number.isFinite(dk) ? dk : 900) / 111) * 1.6));
+    return { latMin: Math.max(-85, h.lat - r), latMax: Math.min(85, h.lat + r), lonMin: h.lon - r * 1.5, lonMax: h.lon + r * 1.5 };
   }
   return region;
 }
@@ -224,7 +225,7 @@ export async function update(changed = []) {
     const rs = memo(`rs|${s.variable}|${rkey(region)}`, () => E.regionSeries(v, region));
     const ds = memo(`ds|${s.variable}|${rkey(region)}`, () => E.deseasonalize(rs));
     const annual = memo(`an|${s.variable}|${rkey(region)}|${mkey(s)}|${s.deseason}`, () => E.annualMeans(s.deseason && months.length < 12 ? ds : rs, months));
-    R.rs = rs; R.annual = annual;
+    R.rs = rs; R.ds = ds; R.annual = annual;
     R.trend = E.linearTrend(annual);
     R.mk = E.mannKendall(annual);
     R.verdict = E.verdict(R.trend, R.mk, units);
@@ -324,6 +325,17 @@ function niceMax(x) {
   return (m <= 1 ? 1 : m <= 1.5 ? 1.5 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 3 ? 3 : m <= 5 ? 5 : m <= 6 ? 6 : 10) * p;
 }
 
+// Number of color steps across [-max, +max] that gives round tick values.
+function niceLevels(max) {
+  for (const L of [10, 8, 12, 6, 16, 14]) {
+    const step = (2 * max) / L;
+    const p = Math.pow(10, Math.floor(Math.log10(step)));
+    const m = Math.round((step / p) * 1000) / 1000;
+    if ([1, 2, 2.5, 5].includes(m)) return L;
+  }
+  return 10;
+}
+
 function packTrend(tm, maxAbs) {
   const n = tm.slope.length, out = new Float32Array(n * 4);
   for (let c = 0; c < n; c++) {
@@ -354,7 +366,8 @@ export function applyScene() {
   const trendLayer = (tm, id) => {
     const tr = trendRamp(id);
     R.tmapMax = niceMax(robustMax(tm.slope));
-    map.setAux(packTrend(tm, R.tmapMax), R.v.entry.grid, { lut: rampLUT(tr.ramp, { flip: tr.flip }), levels: 12 });
+    R.auxLevels = niceLevels(R.tmapMax * 10);
+    map.setAux(packTrend(tm, R.tmapMax), R.v.entry.grid, { lut: rampLUT(tr.ramp, { flip: tr.flip }), levels: R.auxLevels });
     scene.layer = 1;
     scene.pHatch = s.hatch;
   };
@@ -368,7 +381,7 @@ export function applyScene() {
     scene.trailN = s.showTrail && !s.showRings ? 5 : 0;
     scene.firstOn = s.showFirst && !app.frames.monthly && !s.showRings;
     scene.ringsOn = s.showRings && !app.frames.monthly;
-    scene.bandSoft = ((style.domain[1] - style.domain[0]) * 0.12) / (map.norm.max - map.norm.min);
+    scene.bandSoft = zoneSoft(s.variable) / (map.norm.max - map.norm.min);
     if (s.showDipole && R.dipole) { map.setDipole(packDipole(R.dipole, R.v.entry.grid), R.v.entry.grid); scene.dipoleOn = true; }
     const lonSpan = (((region.lonMax - region.lonMin) % 360) + 360) % 360 || 360;
     if (s.showTrack && R.track && !global && lonSpan < 300 && !s.showRings) {
@@ -405,7 +418,8 @@ export function applyScene() {
     if (t2m && R.tmapT2m) {
       const tr = trendRamp("t2m");
       R.tmapMax = niceMax(robustMax(R.tmapT2m.slope));
-      map.setAux(packTrend(R.tmapT2m, R.tmapMax), t2m.entry.grid, { lut: rampLUT(tr.ramp), levels: 12 });
+      R.auxLevels = niceLevels(R.tmapMax * 10);
+      map.setAux(packTrend(R.tmapT2m, R.tmapMax), t2m.entry.grid, { lut: rampLUT(tr.ramp), levels: R.auxLevels });
       scene.layer = 1;
       scene.pHatch = false;
     }
@@ -458,7 +472,7 @@ export const actions = {
     patch.layerView = a.layerView ?? (patch.mode === "map" ? "trend" : app.state.layerView);
     patch.showRings = !!a.showRings;
     patch.showDipole = !!a.showDipole;
-    if ("showTrack" in a) patch.showTrack = a.showTrack;
+    patch.showTrack = !!a.showTrack;
     app.set(patch);
     if (a.play) setTimeout(() => { setTime(0); setPlaying(true); }, 700);
     else if (a.year != null) setTimeout(() => { const k = app.frames?.years.indexOf(a.year); if (k >= 0) setTime(k); }, 600);
@@ -477,6 +491,7 @@ async function boot() {
   app.catalog = catalog;
   app.content = content;
   app.S = createStore({ ...DEFAULTS, ...fromHash() });
+  document.getElementById("app").dataset.mode = app.state.mode;
   app.S.subscribe((s, changed) => {
     document.getElementById("app").dataset.mode = s.mode;
     if (changed.length === 1 && changed[0] === "chartKind") W.renderInspector();

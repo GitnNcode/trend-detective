@@ -88,3 +88,9 @@ export function trendRamp(id) {
   if (t === "ice") return { ramp: "heat", flip: true };
   return { ramp: t, flip: false };
 }
+
+// Width (in stored units) of the five enhancement steps inside a Shift zone.
+export function zoneSoft(id) {
+  const v = varStyle(id);
+  return (v.domain[1] - v.domain[0]) * ((v.gamma ?? 1) < 1 ? 0.4 : 0.12);
+}
