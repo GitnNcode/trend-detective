@@ -1,0 +1,52 @@
+{
+  "t2m": {
+    "name": "Air temperature (2 m)",
+    "plain": "How warm the air is about head height above the ground or sea.",
+    "why": "Heat-trapping gases, shrinking snow and ice, and changing cloud cover can all push surface air temperature up or down over time."
+  },
+  "t500": {
+    "name": "Temperature at 500 hPa",
+    "plain": "How warm the air is about 5 km up, roughly halfway through the atmosphere.",
+    "why": "Warming at the surface can spread upward, and changes in tropical storms and heat moved by winds can make this layer warm faster or slower than the ground."
+  },
+  "wind250": {
+    "name": "Wind speed at 250 hPa (jet-stream height)",
+    "plain": "How fast the wind blows about 10 km up, where the jet streams run.",
+    "why": "Jet streams are driven by the temperature gap between the poles and the tropics, so when that gap changes, the winds can speed up, slow down, or shift position."
+  },
+  "tqv": {
+    "name": "Water vapor in the air column",
+    "plain": "The total amount of invisible water vapor stacked in the air above one spot, from the ground to space.",
+    "why": "Warmer air can hold more water vapor, so as temperatures change this amount tends to change too."
+  },
+  "precip": {
+    "name": "Precipitation",
+    "plain": "How much rain and snow falls, shown as millimeters of water per day.",
+    "why": "Shifting wind patterns, ocean temperatures, and warmer air carrying more moisture can make some places wetter and others drier."
+  },
+  "evap": {
+    "name": "Evaporation",
+    "plain": "How much water leaves the land and sea surface and rises into the air as vapor, in millimeters per day.",
+    "why": "Warmer surfaces, changing winds, and changes in plants and soil moisture can speed up or slow down evaporation."
+  },
+  "seaice": {
+    "name": "Sea ice fraction",
+    "plain": "The share of the ocean surface covered by floating ice, from 0 (open water) to 1 (completely covered).",
+    "why": "Warmer air and ocean water melt ice faster, and open water soaks up more sunlight than ice, which can speed up further melting."
+  },
+  "soilwet": {
+    "name": "Root-zone soil wetness",
+    "plain": "How wet the soil is in the top meter or so, where plant roots reach, from 0 (bone dry) to 1 (soaked).",
+    "why": "Soil wetness follows rainfall, evaporation, and snowmelt, so a change in any of them can slowly dry out or soak the ground."
+  },
+  "snow": {
+    "name": "Snow mass",
+    "plain": "The weight of snow lying on the ground, in kilograms of water per square meter.",
+    "why": "Snow mass depends on how much falls in winter and how fast it melts, and both are sensitive to temperature."
+  },
+  "runoff": {
+    "name": "Runoff",
+    "plain": "Water that flows over or through the land toward rivers and the sea instead of soaking in, in millimeters per day.",
+    "why": "Runoff rises or falls with rainfall, snowmelt, and how wet the soil already is."
+  }
+}

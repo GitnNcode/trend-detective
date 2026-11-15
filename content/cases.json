@@ -1,0 +1,66 @@
+[
+  {
+    "id": "jet",
+    "title": "Is the jet stream moving?",
+    "steps": [
+      {
+        "text": "Jet streams are fast rivers of air about 10 km up. They steer storms, so if they speed up or shift, weather changes with them. Let's see what the data says about the winter jet over the North Atlantic, a place where it is strong.",
+        "action": { "variable": "wind250", "region": "natlantic", "mode": "series", "months": [12, 1, 2] }
+      },
+      {
+        "text": "Each dot is the average winter wind speed at jet height over this region for one year. The straight line is the best-fit trend, and the shaded band shows how sure we can be about its slope. Check the verdict card: it says whether the trend is significant, suggestive, or not clear yet. Any of those answers is a real finding.",
+        "action": { "variable": "wind250", "region": "natlantic", "mode": "series", "months": [12, 1, 2] }
+      },
+      {
+        "text": "A single average can hide a lot. This map shows the trend in every grid cell. The two ends of the color scale mean opposite directions, and faded cells are ones where the trend is too weak to trust. Look for places where the color flips: the same variable can trend one way in one region and the other way in the next.",
+        "action": { "variable": "wind250", "region": "natlantic", "mode": "map", "months": [12, 1, 2] }
+      },
+      {
+        "text": "Now Shift mode. We outline every place where the wind is 40 m/s or faster, which is roughly the core of the jet. Press play to watch that outline year by year, with the first year shown faintly for comparison.",
+        "action": { "variable": "wind250", "region": "natlantic", "mode": "band", "months": [12, 1, 2], "band": { "min": 40, "max": null } }
+      },
+      {
+        "text": "The summary below the map says whether the fast-wind zone grew, shrank, or slid to a new position, and by how many kilometers per decade. If it says none, the jet stayed put within the noise of this record, and a longer record might be needed to tell.",
+        "action": { "variable": "wind250", "region": "natlantic", "mode": "band", "months": [12, 1, 2], "band": { "min": 40, "max": null } }
+      },
+      {
+        "text": "Why it matters: a flight from New York to London rides this jet, so wind changes can change flight times. Whatever the result says here, you just did what a data detective does: picked a variable, picked a place, drew the series, and tested whether the change is real.",
+        "action": { "variable": "wind250", "region": "natlantic", "mode": "map", "months": [12, 1, 2], "route": "nyc_lon" }
+      }
+    ]
+  },
+  {
+    "id": "arctic_lane",
+    "title": "Is the Arctic lane opening?",
+    "steps": [
+      {
+        "text": "Every September the Arctic Ocean ice shrinks to its yearly minimum. Ships can sail through the Arctic only when the water is open, so this is the month to watch. First, the ice cover over the whole Arctic in September, year by year.",
+        "action": { "variable": "seaice", "region": "arctic", "mode": "series", "months": [9] }
+      },
+      {
+        "text": "The sea ice fraction runs from 0 (open water) to 1 (solid ice). Check the trend line and the verdict card: is the slope going down, and how sure are we? Whether the verdict is significant or only suggestive, it is the evidence we have.",
+        "action": { "variable": "seaice", "region": "arctic", "mode": "series", "months": [9] }
+      },
+      {
+        "text": "An average hides where the ice is changing. Now Shift mode draws the area that is mostly open water, where less than 15 percent of the surface is ice. Press play and watch how that area changes from year to year, compared with the faint outline of the first year.",
+        "action": { "variable": "seaice", "region": "arctic", "mode": "band", "months": [9], "band": { "min": null, "max": 0.15 } }
+      },
+      {
+        "text": "Read the summary under the map. It tells you whether the open-water area expanded, contracted, or whether the ice edge simply moved, and by how many kilometers per decade. If the verdict is none, the record may be too short or too noisy to say yet.",
+        "action": { "variable": "seaice", "region": "arctic", "mode": "band", "months": [9], "band": { "min": null, "max": 0.15 } }
+      },
+      {
+        "text": "Now a ship's point of view. The Northern Sea Route runs along Russia's Arctic coast from Europe to the Pacific. For each year, we count the months when every point on the route has less than 15 percent ice.",
+        "action": { "variable": "seaice", "region": "arctic", "mode": "route", "months": [7, 8, 9, 10], "route": "nsr", "band": { "min": null, "max": 0.15 } }
+      },
+      {
+        "text": "Each bar is one year and shows how many months the whole route was open. Look for the choke point, the stretch that stays icy longest. A coarse grid cannot see narrow straits, so treat this as a guide to the pattern, not a navigation chart.",
+        "action": { "variable": "seaice", "region": "arctic", "mode": "route", "months": [7, 8, 9, 10], "route": "nsr", "band": { "min": null, "max": 0.15 } }
+      },
+      {
+        "text": "You followed the whole detective path: the series, where the change is, and what it means for a real route. Now try the Northwest Passage or pick your own region and variable.",
+        "action": { "variable": "seaice", "region": "arctic", "mode": "route", "months": [7, 8, 9, 10], "route": "nwp", "band": { "min": null, "max": 0.15 } }
+      }
+    ]
+  }
+]
