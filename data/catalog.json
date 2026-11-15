@@ -23,6 +23,28 @@
       }
     },
     {
+      "id": "t500",
+      "file": "t500.bin",
+      "source": "MERRA-2 M2TMNXSLV, T500",
+      "units": "°C",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.000883264,
+      "offset": -24.405467584,
+      "defaultBand": {
+        "min": null,
+        "max": -20
+      }
+    },
+    {
       "id": "wind250",
       "file": "wind250.bin",
       "source": "MERRA-2 M2TMNXSLV, speed from monthly-mean U250 and V250",
@@ -41,6 +63,28 @@
       "offset": 43.48429372,
       "defaultBand": {
         "min": 30,
+        "max": null
+      }
+    },
+    {
+      "id": "tqv",
+      "file": "tqv.bin",
+      "source": "MERRA-2 M2TMNXSLV, TQV",
+      "units": "kg/m²",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.00114137,
+      "offset": 37.159583090000005,
+      "defaultBand": {
+        "min": 40,
         "max": null
       }
     },
@@ -67,6 +111,28 @@
       }
     },
     {
+      "id": "evap",
+      "file": "evap.bin",
+      "source": "MERRA-2 M2TMNXFLX, EVAP",
+      "units": "mm/day",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.000245284,
+      "offset": 6.869668988000001,
+      "defaultBand": {
+        "min": 3,
+        "max": null
+      }
+    },
+    {
       "id": "seaice",
       "file": "seaice.bin",
       "source": "MERRA-2 M2TMNXFLX, FRSEAICE / FROCEAN, land masked",
@@ -86,6 +152,72 @@
       "defaultBand": {
         "min": null,
         "max": 0.15
+      }
+    },
+    {
+      "id": "soilwet",
+      "file": "soilwet.bin",
+      "source": "MERRA-2 M2TMNXLND, GWETROOT",
+      "units": "0 to 1",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 1.4006e-05,
+      "offset": 0.544805388,
+      "defaultBand": {
+        "min": null,
+        "max": 0.3
+      }
+    },
+    {
+      "id": "snow",
+      "file": "snow.bin",
+      "source": "MERRA-2 M2TMNXLND, SNOMAS",
+      "units": "kg/m²",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.0372724,
+      "offset": 1211.3529999999998,
+      "defaultBand": {
+        "min": 10,
+        "max": null
+      }
+    },
+    {
+      "id": "runoff",
+      "file": "runoff.bin",
+      "source": "MERRA-2 M2TMNXLND, RUNOFF",
+      "units": "mm/day",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.00254213,
+      "offset": 82.619225,
+      "defaultBand": {
+        "min": 1,
+        "max": null
       }
     }
   ]

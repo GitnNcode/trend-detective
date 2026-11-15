@@ -28,8 +28,8 @@ Earthdata credentials come from `~/.netrc` (`machine urs.earthdata.nasa.gov logi
 - `seaice` is ice fraction of the ocean, from `FRSEAICE` and the constant `FROCEAN` (M2C0NXASM). Native cells with `FROCEAN < 0.5` are land and stored as missing, never 0. `build.py` checks whether `FRSEAICE` is per grid box or per ocean tile and prints which.
 - Land variables (`soilwet`, `snow`, `runoff`) are undefined over ocean in MERRA-2 and stay missing.
 - The record is the run of consecutive months from 1980-01; a gap ends it (contract: no gaps).
-- Real files: `t2m`, `wind250`, `seaice`, `precip`, 1980-01 to 2026-09 (561 months). 2026 is a partial year.
-- Known issue: `precip` (PRECTOTCORR) has a spike over southern Italy in 2026-02 (up to 134 mm/day on our grid, 415 at native resolution). It comes from NASA's recent, preliminary months and is left as delivered. Use complete years up to 2025 for trends.
+- Real files: all ten variables, 1980-01 to 2026-09 (561 months). 2026 is a partial year.
+- Known issue: `precip` (PRECTOTCORR) has a spike over southern Italy in 2026-02 (up to 134 mm/day on our grid, 415 at native resolution). It comes from NASA's recent, preliminary months and is left as delivered. `runoff` inherits it (up to 165 mm/day there), because MERRA-2's land model is driven by that precipitation. Use complete years up to 2025 for trends.
 
 ## First check against published numbers
 
