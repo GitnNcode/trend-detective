@@ -50,6 +50,7 @@ One binary file per variable: `/data/<id>.bin`
 - Int16, little-endian, shape `[nt, nlat, nlon]`, row-major (time outermost).
 - Latitude runs south to north. Longitude runs west to east starting at -180.
 - Real value = stored * scale + offset. Missing = -32768.
+- Land cells in `seaice` (and ocean cells in land variables) are stored as missing, never 0. Otherwise a coastal route point over land reads as open water.
 - Time index 0 is the `start` month in the catalog; one step per month, no gaps.
 
 `/data/catalog.json`:
@@ -114,12 +115,16 @@ trendMap(v, months)                     // -> { slope: Float32Array, p: Float32A
 bandTrack(v, { min, max, months, region })
   // -> { years, areaKm2: number[], centroidLat: number[], centroidLon: number[],
   //      edgeLat: number[][]  (per year, per longitude column, NaN if no band),
-  //      mask(yearIndex): Uint8Array }
+  //      mask(yearIndex): Uint8Array,
+  //      edgeKind: "equatorward" | "poleward" | "none", bandShape }   edgeLat rule: see Lane 2 brief
 bandSummary(track)
   // -> { areaTrend, edgeShiftKmPerDecade, edgeP,
   //      kind: "shift" | "expansion" | "contraction" | "none", sentence }
-routeOpen(v, route, { max })
-  // -> { years, openMonths: number[], chokePointIndex }  a month is open if every route point is <= max
+routeOpen(v, route, { max, greatCircle })
+  // -> { years, openMonths: number[], openMonthList, samples, chokePointIndex }
+  //    a month is open if every route sample is <= max; missing (land) samples are ignored.
+  //    Paths go the short way round (the Northern Sea Route crosses 180°). greatCircle: true for flight paths.
+sampleRoute(route, grid, { greatCircle }) // -> [[lat, lon], ...] the same path routeOpen samples, so the map draws exactly that
 ```
 
 Significance rule used everywhere: "significant" if p < 0.05 on both the t-test and autocorrelation-corrected Mann-Kendall, "suggestive" if only one passes or p < 0.10, otherwise "none". A "none" verdict still shows the trend and says a longer record may be needed.
@@ -144,7 +149,24 @@ Significance rule used everywhere: "significant" if p < 0.05 on both the t-test 
     "steps": [ { "text": "Narration shown on screen.", "action": { "variable": "wind250", "region": "natlantic", "mode": "series" } } ] } ]
 ```
 
-`mode` is one of `"series"`, `"map"`, `"band"`, `"route"`. Region `type` values follow the challenge text where possible: desert, rainforest, estuary, city air, ocean, polar.
+`mode` is one of `"series"`, `"map"`, `"band"`, `"route"`. Region `type` values follow the challenge text where possible: desert, rainforest, estuary, city air, ocean, polar, plus `global` for the whole-Earth preset.
+
+Additive fields (agreed after Lane 4's first pass; full notes in `content/README.md`):
+
+- Usecase rows and case-step `action`s always carry `months` (all 12 for a year-round view).
+- `mode: "band"` carries `band: { min, max }`.
+- `mode: "route"` carries `route: "<route id>"` and `band: { min: null, max: 0.15 }`; `band.max` is passed to `routeOpen` as `max`.
+- In a `"series"` or `"map"` step, `route` means "draw this route as an overlay only" (the New York to London flight path in the jet case).
+- The Northwest Passage is narrower than one `seaice` cell, so its result is approximate and must be labelled that way.
+
+### Submission rules (2026 guide, checked by Lane 4)
+
+- Deadline: Sunday 11:59 PM, Local Event time zone. Our internal target stays 9 PM.
+- Demo: a video of 30 seconds or less, or at most 7 slides including title. Over either limit means no Global Judging. Public link, no login. Slides must show team name, member names and the challenge. Nobody under 18 on camera or audio.
+- Judged 1 to 5 on Impact, Creativity, Validity, Relevance and Presentation.
+- AI: allowed for code and text, not for coming up with the idea. Every lane adds one line to its folder README saying code or data was written with Claude and reviewed by the team; Lane 3 adds a matching footer line on the site.
+- No NASA logos or branding anywhere.
+- Each lane sends Lane 4 every library, font and image it ships, for the References field.
 
 ---
 
@@ -165,7 +187,7 @@ Do these in order:
 
 Done when: real files for at least the first four variables are in `/data`, and `check.py` output looks physically sane.
 
-Stage 2 job: produce the validation table for `/docs` (our global `t2m` trend versus NASA GISTEMP's published trend for the same years; our September Arctic ice area trend versus the published figure), and note every dataset with its citation.
+Stage 2 job: produce the validation table in `docs/VALIDATION.md` (our global `t2m` trend versus NASA GISTEMP for the same years; our September Arctic ice trend versus NSIDC, about -12% per decade over 1979 to 2024), and note every dataset with its citation.
 
 ---
 
@@ -181,8 +203,8 @@ Do these in order:
 2. `grid.js`: `loadVariable`, `regionSeries` (cos-latitude weights, skip missing, handle regions that cross the date line).
 3. `stats.js`: `deseasonalize`, `annualMeans`, `linearTrend` (OLS, t-based p-value and 95% interval), `mannKendall` (tie-corrected, plus a p-value with lag-1 autocorrelation variance correction, plus Sen's slope), `verdict`.
 4. `trendMap`: OLS slope and p per cell on annual means.
-5. `band.js`: `bandTrack` on annual (or season-filtered) fields. Area uses true cell area from latitude. `edgeLat` is the most equatorward latitude in each longitude column that is inside the band, for bands with `max` set on a field that grows toward the pole, and the most poleward otherwise; document the rule in a comment. `bandSummary` classifies: edges on both sides moving the same direction with flat area is a shift, area change with steady centroid is expansion or contraction, nothing significant is none.
-6. `route.js`: `routeOpen`. Interpolate route points to roughly one sample per grid cell.
+5. `band.js`: `bandTrack` on annual (or season-filtered) fields. Area uses true cell area from latitude. `edgeLat` is the edge that faces out of the band, chosen from the data: a band on the pole side (sea ice above 15%, air below 0 °C) gets its most equatorward in-band latitude; a band on the equator side (open water, `seaice` at most 0.15) gets its most poleward in-band latitude, which is the ice edge; a strip (jet core) reports the poleward edge and `bandSummary` uses both. A run that reaches the grid or region boundary is not an edge (NaN). Report the choice in `edgeKind`. (The original wording, "most equatorward for `max` on a field that grows toward the pole", pinned the open-water edge to 50°N every year; Lane 2 fixed this.) Check it on mock `seaice`. `bandSummary` classifies: edges on both sides moving the same direction with flat area is a shift, area change with steady centroid is expansion or contraction, nothing significant is none.
+6. `route.js`: `routeOpen`. Interpolate route points to roughly one sample per grid cell, the short way round in longitude (170°E to 175°W must not cross 0°).
 7. Tests: generate series with a known slope and check recovery; a pure-noise series should come back "none" about 95% of the time over 200 trials; a synthetic band that moves 1° per decade should report about 111 km per decade.
 
 Done when: all tests pass on mock data and every function handles missing values without returning NaN verdicts.
@@ -228,7 +250,7 @@ Do these in order:
 5. `routes.json`: Northern Sea Route and Northwest Passage as waypoint lists; one North Atlantic great-circle flight path (New York to London) for the jet case.
 6. `cases.json`: two demos, 5 to 7 steps each. "Is the jet stream moving?" walks series, then map, then band on `wind250`. "Is the Arctic lane opening?" walks series, then band, then route on `seaice`. Write the narration so it still reads correctly if the result is not significant; fill in actual numbers in Stage 2.
 7. Read the 2026 Project Submission Guide and the Judging and Awards Guide tonight. Post the required demo format (slides or video, length limit) and the judging criteria in the group chat.
-8. Draft `/docs/README.md` and the submission text: summary, how it addresses each of the four objectives, NASA data used, references, and the AI-use disclosure (we used Claude to help write code and text).
+8. Draft `/docs/README.md` and the submission text: summary, how it addresses each of the four objectives, NASA data used, references, and the AI-use disclosure (we used Claude to help write code and text). The References field must list every library, font, image and data source we ship, open source included.
 
 Done when: all five JSON files validate against the contract shapes and the submission draft has every required field.
 
