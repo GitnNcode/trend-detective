@@ -112,9 +112,10 @@ input[type="range"].trange { width: 130px; accent-color: var(--accent); }
 .figtitle .yr { font: 600 22px/1 var(--display); letter-spacing: -0.01em; color: var(--label); white-space: nowrap; flex: 0 0 auto; }
 .figtitle .t { min-width: 0; }
 .map { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: crosshair; background: #fff; }
+.map.ring-hover { cursor: grab; }
 .map.dragging { cursor: grabbing; }
 .map .layer { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-#overlayCanvas { pointer-events: none; }
+#overlayCanvas, .map canvas.gizmo { pointer-events: none; }
 .compass { position: absolute; right: 12px; top: 12px; z-index: 5; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-pop); cursor: pointer; display: grid; place-items: center; }
 .compass[hidden] { display: none; }
 .compass svg { width: 18px; height: 18px; display: block; }

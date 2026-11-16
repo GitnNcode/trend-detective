@@ -16,7 +16,7 @@ Then visit http://localhost:8000/app/ (the root `index.html` redirects there). `
 
 - **Menu bar:** File (export figure, record loop, copy link), Product, Field, Region, Season (and trend period), Display (projection, fill, overlays), Procedures (guided cases and the question table), Help (methods and data).
 - **Toolbar:** loop controls (first, back, play, forward, last), frame slider and speed, yearly or monthly frames, season presets, and product controls (Shift threshold, route, location, comparison region, arrow source).
-- **Display:** a 3D globe by default (a perspective view of the sphere: drag to turn it in any direction, including over the poles; it coasts briefly on release; scroll to zoom; the compass button turns north back up), or a flat cylindrical equidistant or polar stereographic map from the Display menu. All use discrete color steps, contour edges, black coastlines, lat/lon labels and a colorbar.
+- **Display:** a 3D globe by default (a perspective view of the sphere: drag to turn it with north kept up; three faint rotation rings around it turn it one axis at a time, X (red) tilting it toward a pole, Y (green) spinning it about its axis and Z (blue) rolling the picture, with Shift snapping to 5°; scroll to zoom; the compass button turns north back up; Display can hide the rings), or a flat cylindrical equidistant or polar stereographic map from the Display menu. All use discrete color steps, contour edges, black coastlines, lat/lon labels and a colorbar.
 - **Inspector:** result cards: the headline rate with its 95% range, the two p-values, the chart, the detection gauge and product extras (compass dials, range bars).
 - **Status bar:** the cursor readout (position, value, local trend), the current frame, the data source and the data volume loaded.
 
@@ -49,7 +49,7 @@ Keys: space plays the loop; ← and → step one frame; 1–9 and 0 switch produ
 | `main.js` | State, data loading, per-product analysis, scene setup |
 | `data.js` | Catalog, content, streamed `.bin` loading, texture packing |
 | `map/gl.js` | WebGL2 renderer (inverse projection, sphere shading, discrete fills, zone enhancement, hatching) |
-| `map/map.js` | Projections (3D globe camera, flat, polar), drag-to-turn interaction, vector overlay (frame, coastlines, tracks, arrows) |
+| `map/map.js` | Projections (3D globe camera, flat, polar), drag-to-turn interaction and the globe's rotation rings, vector overlay (frame, coastlines, tracks, arrows) |
 | `ui/workstation.js` | Menus, toolbar, inspector, colorbar, figure title, status bar |
 | `ui/sheet.js` | Multi-panel atlas and lineup |
 | `ui/cases.js` | Procedure (guided case) player |

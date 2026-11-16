@@ -38,7 +38,7 @@ const DEFAULTS = {
   band: { min: 10, max: null }, route: "nsr", overlayRoute: null, proj: "auto", cadence: "annual",
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
-  twin: null, prompt: null, cells: false, contours: true, coast: true, grid: true, hatch: true, showMonthly: false,
+  twin: null, prompt: null, cells: false, contours: true, coast: true, grid: true, gizmo: true, hatch: true, showMonthly: false,
   vecSource: "velocity", vecWindow: 15, compareId: "antarctic", period: null,
 };
 
@@ -330,7 +330,7 @@ export async function update(changed = []) {
     if (!app.C) app.C = await import("./chart.js").catch((e) => { console.warn("chart.js not ready", e); return null; });
     if (my !== token) return;
     W.ensureChart();
-    app.map.setOptions({ cells: s.cells, contours: s.contours, coast: s.coast, grid: s.grid, landFill: s.variable === "shipslow" ? "rgb(214,214,214)" : null });
+    app.map.setOptions({ cells: s.cells, contours: s.contours, coast: s.coast, grid: s.grid, gizmo: s.gizmo, landFill: s.variable === "shipslow" ? "rgb(214,214,214)" : null });
 
     if (changed.some((k) => ["regionId", "custom", "variable", "proj", "mode", "init", "twin", "compareId", "voy"].includes(k))) {
       const pk = autoProjection(s, region);

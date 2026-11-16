@@ -66,6 +66,7 @@ export function renderMenubar() {
     { id: "display", label: "Display", items: [
       { hdr: "Projection" },
       ...[["auto", "3D globe"], ["flat", "Flat map (cylindrical equidistant)"], ["polar", "Polar stereographic"]].map(([k, l]) => ({ label: l, mark: radio(s.proj === k || (k === "auto" && s.proj === "globe")), act: () => actions.set({ proj: k }) })),
+      { label: "Rotation rings on the globe", mark: check(s.gizmo), act: () => actions.toggle("gizmo") },
       { sep: true }, { hdr: "Fill" },
       { label: "Shaded contours", mark: radio(!s.cells), act: () => actions.set({ cells: false }) },
       { label: "Grid cells", mark: radio(s.cells), act: () => actions.set({ cells: true }) },
@@ -89,7 +90,7 @@ export function renderMenubar() {
       { sep: true }, { hdr: "Questions" },
       ...c.usecases.map((q) => ({ label: q.prompt, key: MODES.find((m) => m.id === q.mode)?.short ?? q.mode, mark: radio(s.prompt === q.prompt), act: () => actions.applyAction(q, q.prompt) })),
     ] },
-    { id: "help", label: "Help", items: [{ label: "Methods and data", act: () => { $("#aboutModal").hidden = false; } }, { label: "Keys: space play · ←/→ frame · 1–9, 0 product", disabled: true }, { label: "B box · E export · R record · L link", disabled: true }] },
+    { id: "help", label: "Help", items: [{ label: "Methods and data", act: () => { $("#aboutModal").hidden = false; } }, { label: "Keys: space play · ←/→ frame · 1–9, 0 product", disabled: true }, { label: "B box · E export · R record · L link", disabled: true }, { label: "Globe rings: X tilt · Y spin · Z roll · Shift snaps 5°", disabled: true }] },
   ];
   const bar = $("#menubar");
   bar.innerHTML = `<div class="appname"><svg viewBox="0 0 16 16"><path d="M1 11c3-4 5-4 7-2s4 2 7-2" stroke="#ffd400" stroke-width="1.6" fill="none"/><path d="M1 6c3-4 5-4 7-2s4 2 7-2" stroke="#7d838a" stroke-width="1.2" fill="none"/></svg>Trend Detective</div>

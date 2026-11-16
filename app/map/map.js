@@ -3,7 +3,8 @@
 // labels, black coastlines, thin graticule, yellow region box, NHC-style
 // track and cone, and vector arrows for climate velocity.
 // The default view is a 3D globe: the sphere seen through a perspective
-// camera, turned freely by dragging (it keeps spinning briefly on release).
+// camera. Dragging it keeps north up; three faint rotation rings around it
+// (X tilt, Y spin, Z roll) turn it about one axis at a time.
 // Written with Claude and reviewed by the team.
 
 import * as d3 from "d3";
@@ -40,8 +41,8 @@ perspectiveRaw.invert = (x, y) => {
   return [Math.atan2(x * sc, rho * Math.sqrt(1 - sc * sc)), rho ? Math.asin((y * sc) / rho) : 0];
 };
 
-// Unit quaternions for d3's three-axis rotation angles [lambda, phi, gamma]
-// (the "versor" formulation used for dragging a globe by a point on it).
+// Unit quaternions for d3's three-axis rotation angles [lambda, phi, gamma],
+// used to fly the globe along the shortest arc between two views.
 const qFromAngles = ([l, f, g]) => {
   l *= RAD / 2; f *= RAD / 2; g *= RAD / 2;
   const sl = Math.sin(l), cl = Math.cos(l), sp = Math.sin(f), cp = Math.cos(f), sg = Math.sin(g), cg = Math.cos(g);
@@ -52,20 +53,6 @@ const qToAngles = (q) => [
   Math.asin(clamp(2 * (q[0] * q[2] - q[3] * q[1]), -1, 1)) / RAD,
   Math.atan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] * q[2] + q[3] * q[3])) / RAD,
 ];
-const qMul = (a, b) => [
-  a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
-  a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
-  a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
-  a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
-];
-// Rotation that carries unit vector v0 onto v1 along the great circle.
-const qDelta = (v0, v1) => {
-  const w = [v0[1] * v1[2] - v0[2] * v1[1], v0[2] * v1[0] - v0[0] * v1[2], v0[0] * v1[1] - v0[1] * v1[0]];
-  const l = Math.hypot(w[0], w[1], w[2]);
-  if (!l) return [1, 0, 0, 0];
-  const t = Math.acos(clamp(v0[0] * v1[0] + v0[1] * v1[1] + v0[2] * v1[2], -1, 1)) / 2, sn = Math.sin(t);
-  return [Math.cos(t), (w[2] / l) * sn, (-w[1] / l) * sn, (w[0] / l) * sn];
-};
 const cartesian = ([lon, lat]) => { const cf = Math.cos(lat * RAD); return [cf * Math.cos(lon * RAD), cf * Math.sin(lon * RAD), Math.sin(lat * RAD)]; };
 const rotOf = (v) => [-v.lon, -v.lat, v.roll ?? 0];
 const viewOfRot = (r) => ({ lon: wrapLon(-r[0]), lat: -r[1], roll: r[2] });
@@ -78,6 +65,21 @@ function rotationMatrix(rot) {
 }
 
 const COMPASS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 11 8H5z" fill="#ff3b30"/><path d="M5 8h6l-3 6.4z" fill="#aeaeb2"/></svg>`;
+
+// ---------- rotation rings ----------
+// A rotation gizmo around the globe, drawn as if seen a little from above
+// and to the side: X (red, a tall ellipse) tilts the globe toward a pole,
+// Y (green, a flat ellipse) spins it about its own axis, Z (blue, the circle
+// round the outside) rolls the picture about the line of sight. The rings
+// turn with the roll, so Y always lies along the equator's direction on
+// screen. They are faint at rest and brighten on hover and while dragged.
+const RINGS = {
+  x: { rgb: "255,59,48", label: "Tilt" },
+  y: { rgb: "52,199,89", label: "Spin" },
+  z: { rgb: "0,122,255", label: "Roll" },
+};
+const RING_FLAT = 0.34; // short/long axis of the X and Y ellipses
+const RING_SNAP = 5; // degrees, while Shift is held
 
 export class MapView {
   constructor(root, handlers = {}) {
@@ -93,7 +95,13 @@ export class MapView {
     this.view = { lon: 0, lat: 0, roll: 0, zoom: 1 };
     this.polarSouth = false;
     this.fly = null;
-    this.spin = null;
+    // The rings live on their own canvas, so exports and recordings (which
+    // copy the field and overlay canvases) leave them out.
+    this.gzCanvas = document.createElement("canvas");
+    this.gzCanvas.className = "layer gizmo";
+    this.gzCtx = this.gzCanvas.getContext("2d");
+    this.ovCanvas.after(this.gzCanvas);
+    this.gz = { hover: null, active: null, near: false, pt: null };
     this.compass = document.createElement("button");
     this.compass.type = "button";
     this.compass.className = "compass no-map-events";
@@ -109,7 +117,7 @@ export class MapView {
     this.style = { cdom: [0, 1], gamma: 1, levels: 12 };
     this.scene = { layer: 0 };
     this.overlay = {};
-    this.options = { cells: false, contours: true, coast: true, grid: true };
+    this.options = { cells: false, contours: true, coast: true, grid: true, gizmo: true };
     this.world = null;
     this.dirty = true;
     this.baseDirty = true;
@@ -180,7 +188,8 @@ export class MapView {
     if (kind === "flat") this.view = { lon: this.view.lon, lat: 0, zoom: 1 };
     if (kind === "globe") this.view = { lon: this.view.lon, lat: clamp(this.view.lat, -60, 60), roll: 0, zoom: 1 };
     this.fly = null;
-    this.spin = null;
+    this.gz.hover = this.gz.active = null;
+    this.root.classList.remove("ring-hover");
     this.baseDirty = true;
     this.requestRender();
   }
@@ -188,7 +197,6 @@ export class MapView {
   flyTo(target, ms = 900) {
     const from = { ...this.view };
     const to = { ...from, ...target };
-    this.spin = null;
     this.fly = { from, to: { ...to, lon: from.lon + wrapLon(to.lon - from.lon) }, t0: performance.now(), ms };
     // The globe turns along the shortest arc between the two orientations.
     if (this.kind === "globe") {
@@ -253,7 +261,7 @@ export class MapView {
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this.root.dataset.size = this.w < 640 ? "sm" : this.w < 980 ? "md" : "lg";
     this.gl.resize(this.w, this.h, this.dpr);
-    for (const c of [this.ovCanvas, this.base]) { c.width = Math.round(this.w * this.dpr); c.height = Math.round(this.h * this.dpr); }
+    for (const c of [this.ovCanvas, this.base, this.gzCanvas]) { c.width = Math.round(this.w * this.dpr); c.height = Math.round(this.h * this.dpr); }
     this.baseDirty = true;
     this.requestRender();
   }
@@ -282,14 +290,36 @@ export class MapView {
         if (ll) drag = { draw: true, start: ll, sx: pt.x, sy: pt.y, cur: ll };
         return;
       }
-      drag = { x: pt.x, y: pt.y, sx: pt.x, sy: pt.y, moved: false, vx: 0, vy: 0, t: performance.now() };
       this.fly = null;
-      this.spin = null;
       el.classList.add("dragging");
+      const ring = this._ringAt(pt, e.pointerType);
+      this.gz.hover = ring;
+      el.classList.toggle("ring-hover", !!ring);
+      if (ring) {
+        // A rotation ring: turn about that one axis.
+        const v = this.view;
+        drag = { ring, x: pt.x, y: pt.y, raw: ring === "x" ? v.lat : ring === "y" ? v.lon : v.roll ?? 0 };
+        this.gz.active = ring;
+        this.gz.pt = pt;
+        if (this.hover) { this.hover = null; this.handlers.onHover?.(null); }
+        this.requestRender();
+        return;
+      }
+      drag = { x: pt.x, y: pt.y, sx: pt.x, sy: pt.y, moved: false };
     });
     el.addEventListener("pointermove", (e) => {
       const pt = this._pt(e);
       if (!drag) {
+        const ring = e.target.closest(".no-map-events") ? null : this._ringAt(pt, e.pointerType);
+        if (ring !== this.gz.hover) el.classList.toggle("ring-hover", !!ring);
+        this.gz.hover = ring;
+        this.gz.near = true;
+        this.gz.pt = pt;
+        if (ring) {
+          if (this.hover) { this.hover = null; this.handlers.onHover?.(null); }
+          this.requestRender();
+          return;
+        }
         const ll = this.invert(pt.x, pt.y);
         this.hover = ll ? { ...ll, x: pt.x, y: pt.y } : null;
         this.handlers.onHover?.(this.hover, pt);
@@ -304,42 +334,48 @@ export class MapView {
         this.requestRender();
         return;
       }
+      if (drag.ring) { this._turnRing(drag, pt, e.shiftKey); return; }
       const dx = pt.x - drag.x, dy = pt.y - drag.y;
       if (Math.hypot(pt.x - drag.sx, pt.y - drag.sy) > 3) drag.moved = true;
-      const now = performance.now(), dt = Math.max(1, now - drag.t);
-      drag.vx = 0.6 * drag.vx + 0.4 * (dx / dt); drag.vy = 0.6 * drag.vy + 0.4 * (dy / dt);
-      drag.t = now;
       drag.x = pt.x; drag.y = pt.y;
       this.lowRes = true;
-      if (this.kind === "globe") this._spinBy({ x: pt.x - dx, y: pt.y - dy }, pt);
+      if (this.kind === "globe") this._turnBy(dx, dy);
       else this._panBy(dx, dy, pt);
     });
     const end = (e) => {
       if (!drag) return;
       el.classList.remove("dragging");
       const pt = this._pt(e);
+      // A lifted finger hovers nothing; a mouse may have stopped on a ring.
+      this.gz.active = null;
+      this.gz.hover = e.pointerType === "touch" ? null : this._ringAt(pt, e.pointerType);
+      this.gz.pt = pt;
+      el.classList.toggle("ring-hover", !!this.gz.hover);
       if (drag.draw) {
         const box = this.drawBox;
         this.drawBox = null;
         if (box && Math.abs(box.latMax - box.latMin) > 1 && Math.abs(pt.x - drag.sx) > 6) this.handlers.onRegion?.(box);
-      } else if (!drag.moved) {
+      } else if (!drag.ring && !drag.moved) {
+        // A press that did not move (and was not on a ring) is a click.
         const ll = this.invert(pt.x, pt.y);
         if (ll) this.handlers.onClick?.(ll, pt);
-      } else if (this.kind === "globe" && performance.now() - drag.t < 70 && Math.hypot(drag.vx, drag.vy) > 0.12) {
-        // Released while moving: let the globe coast, as if still turned
-        // from a point part-way between the release point and the centre.
-        const [cx, cy] = this.projection().translate();
-        const v = Math.hypot(drag.vx, drag.vy), cap = Math.min(1, 1.4 / v);
-        this.spin = { x: cx + (pt.x - cx) * 0.5, y: cy + (pt.y - cy) * 0.5, vx: drag.vx * cap, vy: drag.vy * cap, t: performance.now() };
       }
       drag = null;
-      this.lowRes = !!this.spin;
+      this.lowRes = false;
       this.baseDirty = true;
       this.requestRender();
     };
     el.addEventListener("pointerup", end);
     el.addEventListener("pointercancel", end);
-    el.addEventListener("pointerleave", () => { if (!drag) { this.hover = null; this.handlers.onHover?.(null); this.requestRender(); } });
+    el.addEventListener("pointerleave", () => {
+      if (drag) return;
+      this.hover = null;
+      this.gz.hover = null;
+      this.gz.near = false;
+      el.classList.remove("ring-hover");
+      this.handlers.onHover?.(null);
+      this.requestRender();
+    });
     el.addEventListener("wheel", (e) => {
       e.preventDefault();
       const f = Math.exp(-e.deltaY * 0.0016);
@@ -378,29 +414,79 @@ export class MapView {
     this.requestRender();
   }
 
-  // Geographic point under a screen point on the globe. Points off the disc
-  // are pulled back to just inside its edge, so a drag that leaves the globe
-  // keeps turning it.
-  _onGlobe(p, pt) {
-    const [cx, cy] = p.translate(), R = p.scale() * LIMB_R * 0.97;
-    let dx = pt.x - cx, dy = pt.y - cy;
-    const d = Math.hypot(dx, dy);
-    if (d > R) { dx *= R / d; dy *= R / d; }
-    const ll = p.invert([cx + dx, cy + dy]);
-    return ll && Number.isFinite(ll[0]) && Number.isFinite(ll[1]) ? ll : null;
-  }
-
-  // Turn the globe so the surface point under screen point `a` moves to
-  // screen point `b`. Any axis is allowed, so the globe can be tipped over
-  // the poles; the compass button turns north back up.
-  _spinBy(a, b) {
-    const p = this.projection();
-    const ga = this._onGlobe(p, a), gb = this._onGlobe(p, b);
-    if (!ga || !gb) return;
-    const q = qMul(qFromAngles(rotOf(this.view)), qDelta(cartesian(ga), cartesian(gb)));
-    this.view = { ...viewOfRot(qToAngles(q)), zoom: this.view.zoom };
+  // Dragging the globe itself: sideways spins it about its axis, up and
+  // down tilts it toward a pole (no further than looking straight down on
+  // it), so north stays up; only the Z ring changes the roll. The surface
+  // near the centre follows the pointer, along the rolled screen axes.
+  _turnBy(dx, dy) {
+    const k = this.projection().scale(), r = (this.view.roll ?? 0) * RAD;
+    const east = dx * Math.cos(r) - dy * Math.sin(r), south = dx * Math.sin(r) + dy * Math.cos(r);
+    this.view.lon = wrapLon(this.view.lon - east / k / RAD);
+    this.view.lat = clamp(this.view.lat + south / k / RAD, -90, 90);
     this.baseDirty = true;
     this.requestRender();
+  }
+
+  // Dragging a rotation ring turns the globe about that axis only, at the
+  // same rate as dragging the globe: X (tilt) and Y (spin) take the
+  // pointer's movement across and along the rolled equator, Z (roll) its
+  // angle around the centre. Holding Shift snaps to RING_SNAP degrees.
+  _turnRing(drag, pt, snap) {
+    const p = this.projection(), [cx, cy] = p.translate(), k = p.scale();
+    const r = (this.view.roll ?? 0) * RAD, dx = pt.x - drag.x, dy = pt.y - drag.y;
+    if (drag.ring === "z") {
+      const da = Math.atan2(pt.y - cy, pt.x - cx) - Math.atan2(drag.y - cy, drag.x - cx);
+      drag.raw -= Math.atan2(Math.sin(da), Math.cos(da)) / RAD;
+    } else if (drag.ring === "y") drag.raw -= (dx * Math.cos(r) - dy * Math.sin(r)) / k / RAD;
+    else drag.raw = clamp(drag.raw + (dx * Math.sin(r) + dy * Math.cos(r)) / k / RAD, -90, 90);
+    drag.x = pt.x; drag.y = pt.y;
+    const v = snap ? Math.round(drag.raw / RING_SNAP) * RING_SNAP : drag.raw;
+    if (drag.ring === "x") this.view.lat = clamp(v, -90, 90);
+    else if (drag.ring === "y") this.view.lon = wrapLon(v);
+    else this.view.roll = wrapLon(v);
+    this.gz.pt = pt;
+    this.lowRes = true;
+    this.baseDirty = true;
+    this.requestRender();
+  }
+
+  // Screen geometry of the rotation rings: the globe's centre and disc
+  // radius R, the X/Y ring radius rg and Z ring radius rz (kept inside the
+  // frame), and the rolled screen axes ex (east) and ey (south).
+  _gizmo(p = this.projection()) {
+    if (this.kind !== "globe" || this.drawMode || this.options.gizmo === false) return null;
+    const [cx, cy] = p.translate(), R = p.scale() * LIMB_R, f = this.frame();
+    const room = Math.min(cx - f.x0, f.x1 - cx, cy - f.y0, f.y1 - cy) - 3;
+    const rz = Math.max(40, Math.min(R + 15, room)), r = (this.view.roll ?? 0) * RAD;
+    return { cx, cy, R, rz, rg: rz - 8, ex: [Math.cos(r), -Math.sin(r)], ey: [Math.sin(r), Math.cos(r)], roll: r };
+  }
+
+  // Points along a ring, each flagged visible or not: the back halves of
+  // X and Y pass behind the globe and show only beyond its edge.
+  _ringPts(g, key, n = 120) {
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = (i / n) * 2 * Math.PI, c = Math.cos(t), s = Math.sin(t);
+      const [u, w, front] = key === "x" ? [g.rg * RING_FLAT * c, g.rg * s, c >= 0] : key === "y" ? [g.rg * c, g.rg * RING_FLAT * s, s >= 0] : [g.rz * c, g.rz * s, true];
+      pts.push([g.cx + u * g.ex[0] + w * g.ey[0], g.cy + u * g.ex[1] + w * g.ey[1], front || Math.hypot(u, w) > g.R + 0.5]);
+    }
+    return pts;
+  }
+
+  // The ring under a screen point, if any (the nearest within a few pixels).
+  _ringAt(pt, pointerType) {
+    const g = this._gizmo();
+    if (!g) return null;
+    let best = null, bd = pointerType === "touch" ? 14 : 7;
+    for (const key of ["x", "y", "z"]) {
+      const pts = this._ringPts(g, key);
+      for (let i = 1; i < pts.length; i++) {
+        if (!pts[i][2] || !pts[i - 1][2]) continue;
+        const d = segDist(pt.x, pt.y, pts[i - 1], pts[i]);
+        if (d < bd) { bd = d; best = key; }
+      }
+    }
+    return best;
   }
 
   _boxFrom(a, b, eastward) {
@@ -430,14 +516,6 @@ export class MapView {
       this.dirty = true;
       if (f >= 1) this.fly = null;
     }
-    if (this.spin) {
-      const sp = this.spin, dt = Math.min(40, Math.max(0, now - sp.t));
-      sp.t = now;
-      this._spinBy({ x: sp.x, y: sp.y }, { x: sp.x + sp.vx * dt, y: sp.y + sp.vy * dt });
-      const decay = Math.exp(-dt / 240);
-      sp.vx *= decay; sp.vy *= decay;
-      if (Math.hypot(sp.vx, sp.vy) < 0.02) { this.spin = null; this.lowRes = false; this.baseDirty = true; this.dirty = true; }
-    }
     if (this.dirty) { this.dirty = false; this._render(); }
   }
 
@@ -464,6 +542,72 @@ export class MapView {
     });
     this._drawOverlay(p);
     this._updateCompass(p);
+    this._drawGizmo(p);
+  }
+
+  // The rotation rings: faint at rest, a little stronger while the pointer
+  // is over the map, bright (with a light casing) on hover, and brightest
+  // while dragged, when the other two fade almost away. A small readout
+  // next to the pointer names the ring and the value it is changing.
+  _drawGizmo(p) {
+    const ctx = this.gzCtx, dpr = this.dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.gzCanvas.width, this.gzCanvas.height);
+    const g = this._gizmo(p);
+    if (!g) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ui = this.gz, rot = -g.roll, F = g.rg * RING_FLAT;
+    const level = (key) => (ui.active ? (ui.active === key ? 3 : 0) : ui.hover === key ? 2 : 1);
+    const ALPHA = [0.1, ui.near ? 0.42 : 0.26, 0.9, 1], WIDTH = [1, 1.25, 2, 2.4];
+    const stroke = (key, path, depth = 1) => {
+      const lv = level(key);
+      if (lv >= 2) {
+        ctx.beginPath(); path();
+        ctx.strokeStyle = `rgba(255,255,255,${0.6 * depth})`; ctx.lineWidth = WIDTH[lv] + 2.5; ctx.stroke();
+      }
+      ctx.beginPath(); path();
+      ctx.strokeStyle = `rgba(${RINGS[key].rgb},${ALPHA[lv] * depth})`; ctx.lineWidth = WIDTH[lv]; ctx.stroke();
+    };
+    const half = (key, a0, a1) => () => (key === "x" ? ctx.ellipse(g.cx, g.cy, F, g.rg, rot, a0, a1) : ctx.ellipse(g.cx, g.cy, g.rg, F, rot, a0, a1));
+    // Back halves (behind the globe): only what sticks out past its edge.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, this.w, this.h);
+    ctx.arc(g.cx, g.cy, g.R, 0, 2 * Math.PI);
+    ctx.clip("evenodd");
+    stroke("x", half("x", Math.PI / 2, 1.5 * Math.PI), 0.55);
+    stroke("y", half("y", Math.PI, 2 * Math.PI), 0.55);
+    ctx.restore();
+    stroke("z", () => ctx.arc(g.cx, g.cy, g.rz, 0, 2 * Math.PI));
+    // Front halves, the hovered or dragged ring on top.
+    for (const key of ["x", "y"].sort((a, b) => level(a) - level(b))) stroke(key, key === "x" ? half("x", -Math.PI / 2, Math.PI / 2) : half("y", 0, Math.PI));
+
+    const key = ui.active ?? ui.hover;
+    if (!key || !ui.pt) return;
+    const v = this.view, deg = (x, pos, neg) => `${Math.abs(x).toFixed(1)}°${x > 0 ? pos : x < 0 ? neg : ""}`;
+    const roll = Math.round(v.roll ?? 0);
+    const text = `${RINGS[key].label} ${key === "x" ? deg(v.lat, "N", "S") : key === "y" ? deg(wrapLon(v.lon), "E", "W") : `${roll < 0 ? "−" : ""}${Math.abs(roll)}°`}`;
+    const letter = key.toUpperCase();
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+    ctx.lineJoin = "round";
+    ctx.font = `700 ${MONO}`;
+    const lw = ctx.measureText(`${letter} `).width;
+    ctx.font = MONO;
+    const tw = lw + ctx.measureText(text).width;
+    let x = ui.pt.x + 14, y = ui.pt.y - 14;
+    if (x + tw > this.w - 6) x = ui.pt.x - 14 - tw;
+    if (y < 10) y = ui.pt.y + 18;
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 3;
+    ctx.font = `700 ${MONO}`;
+    ctx.strokeText(letter, x, y);
+    ctx.fillStyle = `rgb(${RINGS[key].rgb})`;
+    ctx.fillText(letter, x, y);
+    ctx.font = MONO;
+    ctx.strokeText(text, x + lw, y);
+    ctx.fillStyle = "#222";
+    ctx.fillText(text, x + lw, y);
   }
 
   // The compass shows which way north points at the centre of the globe and
@@ -902,6 +1046,13 @@ function sampleUV(V, g, lat, lon) {
   };
   add(i0, j0, (1 - fx) * (1 - fy)); add(i0, j1, fx * (1 - fy)); add(i1, j0, (1 - fx) * fy); add(i1, j1, fx * fy);
   return w < 0.5 ? null : { u: u / w, v: v / w, s: s / w };
+}
+
+// Distance from (x, y) to the segment from a to b (screen points).
+function segDist(x, y, a, b) {
+  const vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy;
+  const t = l2 ? clamp(((x - a[0]) * vx + (y - a[1]) * vy) / l2, 0, 1) : 0;
+  return Math.hypot(x - a[0] - t * vx, y - a[1] - t * vy);
 }
 
 function boxRing(b) {
