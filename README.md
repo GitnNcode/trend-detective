@@ -51,7 +51,7 @@ MERRA-2 runs slightly below GISTEMP on global warming, a known difference for re
 - MERRA-2 is a model-assimilated reanalysis, not a direct measurement. Precipitation, evaporation, soil wetness, snow and runoff carry more uncertainty than temperature.
 - Grid cells are 2.0° by 2.5° (about 200 km), 1.0° by 1.25° for sea ice. Narrow straits, small estuaries and single cities are blurred, so climate-analog distances are rounded to 50 km and poor or sub-cell matches are not shown.
 
-## Running it locally
+## Running it locally 
 
 Serve the repository root with any static file server (ES modules do not load from `file://`):
 
