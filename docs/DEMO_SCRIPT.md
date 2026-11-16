@@ -92,10 +92,10 @@ Computed with the engine on the MERRA-2 files in `/data`, exactly as the app sho
 | 0:22.7-0:26.9 | Product > Validation: MERRA-2 vs GISTEMP and NSIDC | Every trend is tested, then checked against NASA and NSIDC records. |
 | 0:26.9-0:29.0 | End card with the site address | Try it free, in any browser. |
 
-To re-record (for example with the team name on the title card), serve the repository on port 8765 and run:
+The title card lists the team members and the end card shows the Vercel address. To re-record, serve the repository on port 8765 and run (takes about 9 minutes; `TEAM="..."` adds an extra line above the names):
 
 ```
-TEAM="Team name" MEMBERS="Name A · Name B · Name C · Name D" node app/dev/record-demo.mjs docs/demo/trend-detective-demo.mp4
+MEMBERS="Aditya Mishra · David Chen · Sricharan Vagvala · Daniel Garcia" node app/dev/record-demo.mjs docs/demo/trend-detective-demo.mp4
 ```
 
 The script drives the app frame by frame in headless Chromium (`app/dev/demo-director.js` holds the timeline and captions) and encodes with ffmpeg.

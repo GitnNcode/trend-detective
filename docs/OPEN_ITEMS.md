@@ -59,5 +59,5 @@ Team name, member names, Local Event, public URL of the deployed site, demo link
 - **2. `edgeLat` rule:** fixed in the engine (Lane 2); the app uses `edgeKind`/`edgeUsed`.
 - **3. Route notes:** routes cross the date line correctly; land cells are stored as missing; the Northwest Passage result is labelled approximate.
 - **4. Resolution caveat:** stated in the app's Help → Methods dialog and in `docs/README.md`.
-- **5. Team fields:** still open (names, Local Event, demo link). The site will be at GitHub Pages once the repository owner enables it (Settings → Pages → `main`, `/ (root)`).
+- **5. Team fields:** names and roles are in the README, and the site is live on Vercel at https://trend-detective-pipeline.vercel.app (deployed from `main`). Still open: Local Event, and the public link to the demo video once the voice-over is added (`docs/demo/`).
 - **6. Compliance:** no NASA logos or branding; AI use acknowledged in each folder README, the docs, commit trailers and the site's Help dialog. `SUBMISSION.md` lists which product features were suggested by Claude, for the team to confirm.

@@ -150,7 +150,7 @@ export async function install(opts = {}) {
       <div style="font-size:16px;color:#8e8e93">Data: NASA MERRA-2 monthly means, 1980–2026</div>`),
     end: overlayCard("demoEnd", `
       <div style="font-size:64px;font-weight:600;letter-spacing:-0.02em">Trend Detective</div>
-      <div style="font-size:30px;color:#007aff;font-weight:500">gitnncode.github.io/trend-detective</div>
+      <div style="font-size:30px;color:#007aff;font-weight:500">trend-detective-pipeline.vercel.app</div>
       <div style="font-size:18px;color:#8e8e93;margin-top:10px">NASA MERRA-2 · checked against NASA GISTEMP and the NSIDC Sea Ice Index · free, no login</div>`),
     caption: (() => {
       const d = document.createElement("div");
