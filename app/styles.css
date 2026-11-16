@@ -274,3 +274,5 @@ input[type="range"].trange { width: 130px; accent-color: var(--accent); }
 .vmon.best div i { background: #34c759; }
 .vmon.cur span { font-weight: 700; }
 .vmon b { text-align: right; font-weight: 600; }
+.tb.ghost { display: block; margin: 6px auto 0; padding: 0 12px; height: 26px; font-size: 12px; }
+.tb.ghost.on { background: var(--fill-2, #eee); }

@@ -166,6 +166,12 @@ const tons = (x) => (Number.isFinite(x) ? `${Math.round(x).toLocaleString("en-US
 const viaText = (via) => via.filter((x) => x !== "Gibraltar").join(", ") || "open sea";
 const DEFAULT_VOY = { from: "ras_tanura", to: "rotterdam", cls: "aframax", speedKn: 13, iceClass: false, fuelPrice: 600, objective: "cost", month: 11 };
 
+// Past-year "ghost" lanes: off by default, so only the main route shows.
+function ghostButton(heroEl, s) {
+  heroEl.insertAdjacentHTML("beforeend", `<button class="tb ghost ${s.showGhosts ? "on" : ""}" id="shipGhost" title="Show the best route of every year since 1980 as faint coloured lanes (cyan = early years, yellow = recent)">${s.showGhosts ? "Hide past-year lanes" : "Show past-year lanes"}</button>`);
+  heroEl.querySelector("#shipGhost").addEventListener("click", () => actions.set({ showGhosts: !s.showGhosts }));
+}
+
 function plannerCard(s) {
   const T = app.content.terminals ?? [], v = s.voy ?? DEFAULT_VOY;
   const id = (x) => (typeof x === "string" ? x : x.id);
@@ -281,6 +287,7 @@ export function renderInspector() {
         heroEl.querySelector("#shipFc").addEventListener("click", () => actions.set({ shipForecast: !s.shipForecast }));
       }
     }
+    if (V?.history) ghostButton(heroEl, s);
     A.innerHTML = plannerCard(s) + (V?.options ? optionsCard(V, v) : "") + (V?.months ? monthsCard(V, v) : "");
     bindPlanner(A, s);
     const H = V?.history;
@@ -294,11 +301,12 @@ export function renderInspector() {
     const last = sh.years.length - 1, fy = sh.forecast.years.length - 1;
     const nNow = fc ? sh.forecast.lanes.filter((l) => arctic(l.via[fy])).length : counts[last];
     level = "significant";
-    tip = "Each line is the fastest sea path between two ports for one season, from MERRA-2 sea ice and 10 m wind. Cyan lines are early years, yellow recent ones. The map behind shows how much wind and ice slow a ship.";
+    tip = "Each line is the fastest sea path between two ports for one season, from MERRA-2 sea ice and 10 m wind. Turn on past-year lanes to see every year: cyan for early years, yellow for recent ones. The map behind shows how much wind and ice slow a ship.";
     heroEl.innerHTML = hero(fc ? `Predicted for ${sh.forecast.years[fy]}` : `Fastest sea routes, ${sh.years[last]}`, String(nNow), ` of ${sh.lanes.length}`,
       "lanes take an Arctic shortcut", `${esc(monthsLabel(s.months))} · ${sh.inputs.wind ? "sea ice and 10 m wind" : "sea ice only (no surface wind file)"}`);
     heroEl.insertAdjacentHTML("beforeend", `<button class="tb predict ${fc ? "on" : ""}" id="shipFc" title="Project the fastest routes for the next five years from the recent trend in sea ice and wind">${fc ? "Back to past routes" : "Predict next 5 years"}</button>`);
     heroEl.querySelector("#shipFc").addEventListener("click", () => actions.set({ shipForecast: !s.shipForecast }));
+    ghostButton(heroEl, s);
     A.innerHTML = plannerCard(s) + card("ship", fc ? `Next 5 years (${sh.forecast.years[0]}–${sh.forecast.years[fy]})` : "Lanes", shipRows(sh, fc));
     bindPlanner(A, s);
     chartTitle = "Lanes using an Arctic route"; chartRight = esc(monthsLabel(s.months));

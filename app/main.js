@@ -34,7 +34,7 @@ const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 // Arctic sea ice is lowest and the polar shortcuts can open.
 const SHIP_MONTHS = [9, 10, 11];
 const DEFAULTS = {
-  mode: "ship", variable: "shipslow", regionId: "global", custom: null, months: SHIP_MONTHS, shipForecast: false, voy: null,
+  mode: "ship", variable: "shipslow", regionId: "global", custom: null, months: SHIP_MONTHS, shipForecast: false, voy: null, showGhosts: false,
   band: { min: 10, max: null }, route: "nsr", overlayRoute: null, proj: "auto", cadence: "annual",
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
@@ -165,7 +165,7 @@ function shipOverlay(yr) {
   for (const lane of sh.lanes) {
     const latest = new Map();
     lane.paths.forEach((p, y) => { if (p) latest.set(JSON.stringify(p), y); });
-    [...latest.entries()].sort((a, b) => a[1] - b[1]).forEach(([, y]) => routes.push({ points: lane.paths[y], color: yearColor((sh.years[y] - y0) / span), width: 1.6, alpha: fc ? 0.35 : 0.85, halo: false }));
+    if (app.state.showGhosts) [...latest.entries()].sort((a, b) => a[1] - b[1]).forEach(([, y]) => routes.push({ points: lane.paths[y], color: yearColor((sh.years[y] - y0) / span), width: 1.6, alpha: fc ? 0.35 : 0.85, halo: false }));
     if (fc) sh.forecast.lanes.find((l) => l.id === lane.id)?.paths.forEach((p) => p && top.push({ points: p, color: "#ff2d95", width: 2.2, dash: [6, 4] }));
     else if (k >= 0 && lane.paths[k]) top.push({ points: lane.paths[k], color: "#ffffff", width: 2 });
   }
@@ -204,12 +204,13 @@ function makeShipWorker() {
   w.onerror = (e) => { if (app.voyage) { app.voyage.status = "error"; app.voyage.error = e.message || "worker failed"; W.renderInspector(); } };
   return w;
 }
-// One voyage: its best route in every year as year-coloured bands, the frame
+// One voyage: its best route in every year as year-coloured "ghost" bands
+// (only when showGhosts is on), the frame
 // year's route in white, the other route options dashed orange, and with the
 // prediction on, the next five years dashed magenta.
 function voyageOverlay(V, yr) {
   const fc = app.state.shipForecast, routes = [], top = [], H = V.history;
-  if (H) {
+  if (H && app.state.showGhosts) {
     const y0 = H.years[0], span = Math.max(1, (V.year ?? H.years.at(-1)) - y0), latest = new Map();
     H.best.forEach((b, y) => b && latest.set(JSON.stringify(b.path), y));
     [...latest.entries()].sort((a, b) => a[1] - b[1]).forEach(([, y]) => routes.push({ points: H.best[y].path, color: yearColor((H.years[y] - y0) / span), width: 1.8, alpha: fc ? 0.35 : 0.9, halo: false }));
