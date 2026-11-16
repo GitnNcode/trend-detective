@@ -11,6 +11,7 @@ import * as W from "./ui/workstation.js";
 import { renderSheet } from "./ui/sheet.js";
 import { CasePlayer } from "./ui/cases.js";
 import { renderAbout } from "./ui/about.js";
+import { analogKm } from "./ui/inspector.js";
 
 export const MODES = [
   { id: "series", label: "Time series", short: "SERIES" },
@@ -29,7 +30,7 @@ export const MODES = [
 const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const DEFAULTS = {
-  mode: "band", variable: "t2m", regionId: "europe", custom: null, months: ALL_MONTHS,
+  mode: "series", variable: "t2m", regionId: "global", custom: null, months: ALL_MONTHS,
   band: { min: 10, max: null }, route: "nsr", overlayRoute: null, proj: "auto", cadence: "annual",
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
@@ -594,8 +595,8 @@ export function applyScene() {
     const tw = R.twin;
     ov.pins = [{ lat: R.home.lat, lon: R.home.lon, label: R.home.name ?? "Home" }];
     ov.arrows = [];
-    if (tw.thenNow && Number.isFinite(tw.thenNow.lat)) ov.arrows.push({ from: [R.home.lat, R.home.lon], to: [tw.thenNow.lat, tw.thenNow.lon], color: "#ff3b30", label: "1980s climate now" });
-    if (tw.nowWas && Number.isFinite(tw.nowWas.lat)) ov.arrows.push({ from: [R.home.lat, R.home.lon], to: [tw.nowWas.lat, tw.nowWas.lon], color: "#4aa3ff", label: "today's climate, 1980s", labelDy: 12 });
+    if (analogKm(tw.thenNow) != null) ov.arrows.push({ from: [R.home.lat, R.home.lon], to: [tw.thenNow.lat, tw.thenNow.lon], color: "#ff3b30", label: "1980s climate now" });
+    if (analogKm(tw.nowWas) != null) ov.arrows.push({ from: [R.home.lat, R.home.lon], to: [tw.nowWas.lat, tw.nowWas.lon], color: "#4aa3ff", label: "today's climate, 1980s", labelDy: 12 });
   }
   map.setScene(scene);
   map.setOverlay(ov);
@@ -671,7 +672,13 @@ async function boot() {
   content.usecases = content.usecases.filter((u) => ok(u.variable) && (u.vecSource !== "wind" || (ok("u250") && ok("v250"))));
   content.cases = content.cases.filter((c) => c.steps.every((st) => ok(st.action.variable)));
   app.content = content;
-  app.S = createStore({ ...DEFAULTS, ...fromHash() });
+  const fromLink = fromHash();
+  // Bad shared links fall back to the defaults, but say so instead of failing silently.
+  const bad = [];
+  if (fromLink.mode && !MODES.some((m) => m.id === fromLink.mode)) { bad.push(`product "${fromLink.mode}"`); delete fromLink.mode; }
+  if (fromLink.variable && !ok(fromLink.variable)) { bad.push(`field "${fromLink.variable}"`); delete fromLink.variable; }
+  if (fromLink.regionId && !content.regions.some((r) => r.id === fromLink.regionId)) { bad.push(`region "${fromLink.regionId}"`); delete fromLink.regionId; }
+  app.S = createStore({ ...DEFAULTS, ...fromLink });
   document.getElementById("app").dataset.mode = app.state.mode;
   app.S.subscribe((s, changed) => {
     document.getElementById("app").dataset.mode = s.mode;
@@ -685,8 +692,9 @@ async function boot() {
   const fresh = !location.hash || location.hash.length < 2;
   await update(["init"]);
   requestAnimationFrame(tick);
-  // First visit: run the loop once so the zone's movement is the first thing seen.
-  if (fresh) setTimeout(() => { setTime(0); setPlaying(true); app.cases.hint(); }, 600);
+  // First visit: offer the guided tour.
+  if (fresh) setTimeout(() => app.cases.hint(), 600);
+  if (bad.length) W.toast(`This link has an unknown ${bad.join(", ")}; showing the default view instead.`, 6000);
 }
 
 function bindKeys() {

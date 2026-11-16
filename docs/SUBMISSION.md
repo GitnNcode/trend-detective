@@ -18,7 +18,7 @@ Trend Detective is a free website that turns a student into a data detective. Mo
 
 ## Link to Final Project
 
-`[URL of deployed site]` · Source: https://github.com/GitnNcode/trend-detective
+https://trend-detective-pipeline.vercel.app · Source: https://github.com/GitnNcode/trend-detective
 
 ## Detailed Project Description
 
@@ -50,7 +50,7 @@ Trend Detective is a free website that turns a student into a data detective. Mo
 
 **Honest limits.** Linear trends only, on a record of roughly 45 years. MERRA-2 is a model-assimilated reanalysis, not a direct measurement. Grid cells are 2.0° by 2.5° (1.0° by 1.25° for sea ice), so narrow features such as straits and small estuaries are blurred. A trend that is not significant is reported as such.
 
-**Tools.** Vanilla JavaScript (ES modules), WebGL2 (map rendering), HTML canvas (charts), d3 v7 (map projections and paths), topojson-client and world-atlas (Natural Earth coastlines). A Python pipeline (`/data/pipeline`: numpy, xarray, netCDF4, earthaccess) builds the data files. No backend; hosted as static files on GitHub Pages `[confirm URL]`.
+**Tools.** Vanilla JavaScript (ES modules), WebGL2 (map rendering), HTML canvas (charts), d3 v7 (map projections and paths), topojson-client and world-atlas (Natural Earth coastlines). A Python pipeline (`/data/pipeline`: numpy, xarray, netCDF4, earthaccess) builds the data files. No backend; hosted as static files on Vercel (https://trend-detective-pipeline.vercel.app).
 
 ## Use of Super Intelligence (SI)
 
