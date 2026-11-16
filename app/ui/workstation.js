@@ -334,7 +334,7 @@ export function renderStatus() {
   const R = app.R;
   if (!R.v) return;
   const e = R.v.entry, g = e.grid;
-  $("#statusbar").innerHTML = `<span id="stCursor">—</span><span id="stFrame"></span><span>${esc(e.source.split(",")[0])} · ${g.dlat}°×${g.dlon}° · ${(g.nlat * g.nlon).toLocaleString("en-US")} cells × ${e.nt} mo</span><span id="stMeter"></span><span>Not affiliated with NASA</span>`;
+  $("#statusbar").innerHTML = `<span id="stCursor">—</span><span id="stFrame"></span><span>${esc(e.source.split(",")[0])} · ${g.dlat}°×${g.dlon}° · ${(g.nlat * g.nlon).toLocaleString("en-US")} cells × ${e.nt} mo</span><span id="stMeter"></span><span>NASA Space Apps 2026 · Not affiliated with NASA</span>`;
   updateMeter();
   updateFrame();
 }
