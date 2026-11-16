@@ -15,6 +15,9 @@ export const RAMPS = {
   soil: ["#5a3200", "#8c5a1e", "#b98a3c", "#d8c070", "#b8d080", "#70b070", "#2f9a8a", "#1a6aa0", "#123f80"],
   snow: ["#1c1c1c", "#33415e", "#4f6c9a", "#7d9ccb", "#adc6e8", "#dbe7f7", "#ffffff"],
   runoff: ["#1c1c1c", "#1c3550", "#1f5585", "#2f7fbf", "#4fa8e0", "#8fd0f0", "#d0f0ff"],
+  // Ship slowdown: dark navy for normal open sea so the route bands stand out,
+  // warm where strong wind or ice slows ships, red where ice closes the sea.
+  drag: ["#08142b", "#0e2142", "#163059", "#204170", "#2d5486", "#3f6a9a", "#d9b24a", "#ec8a2e", "#df5a28", "#c42e2a", "#8f1027"],
   speed: ["#262626", "#4b2991", "#2a4fb0", "#1f8fd0", "#2fbfa0", "#7fd34e", "#d8e23a", "#f9a825", "#f4511e", "#c62828"],
   // Aerosol optical depth: clean (pale) to hazy (dark brown)
   aerosol: ["#f7f4e6", "#efe3ad", "#e8c662", "#dc9a33", "#bf6522", "#8e3a1a", "#561f12"],
@@ -54,6 +57,7 @@ export const VARS = {
   fzlev: { code: "FZLEV", ramp: "altitude", domain: [0, 5500], levels: 11, trend: "heat", short: "Freezing level", band: { min: 4000, max: null }, step: 50 },
   u250: { code: "U250", ramp: "uwind", domain: [-40, 40], levels: 16, trend: "heat", short: "East wind 250", band: { min: 20, max: null }, step: 1, hidden: true },
   v250: { code: "V250", ramp: "uwind", domain: [-25, 25], levels: 10, trend: "heat", short: "North wind 250", band: { min: 5, max: null }, step: 1, hidden: true },
+  shipslow: { code: "SLOW", ramp: "drag", domain: [0, 25], levels: 10, gamma: 0.5, trend: "heat", short: "Ship slowdown", band: { min: 10, max: null }, step: 0.5, hidden: true },
   u10: { code: "U10M", ramp: "uwind", domain: [-15, 15], levels: 12, trend: "heat", short: "East wind 10 m", band: { min: 5, max: null }, step: 0.5, hidden: true },
   v10: { code: "V10M", ramp: "uwind", domain: [-10, 10], levels: 10, trend: "heat", short: "North wind 10 m", band: { min: 5, max: null }, step: 0.5, hidden: true },
 };

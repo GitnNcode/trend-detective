@@ -36,7 +36,7 @@ export { deseasonalize, annualMeans, linearTrend, mannKendall, verdict } from ".
 export { trendMap } from "./fields.js";
 export { bandTrack, bandSummary } from "./band.js";
 export { routeOpen, bestPath } from "./route.js";
-export { shippingLanes, oceanMask, fastestPath, SHIP, GATES } from "./shipping.js";
+export { shippingLanes, slowdownVar, oceanMask, fastestPath, SHIP, GATES } from "./shipping.js";
 
 // Helpers that the interface may also want.
 export {

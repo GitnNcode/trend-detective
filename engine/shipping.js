@@ -18,7 +18,7 @@
 // opened by hand ("gates"). No tolls, draught limits or piracy routing.
 // Good for how routes shift with ice and wind, not for navigation.
 
-import { latOf, lonOf, normLon, MISSING, EARTH_RADIUS_KM, KM_PER_DEG_LAT } from "./grid.js";
+import { latOf, lonOf, normLon, MISSING, EARTH_RADIUS_KM, KM_PER_DEG_LAT, makeVar } from "./grid.js";
 import { annualFields } from "./fields.js";
 import { sampleCells } from "./route.js";
 
@@ -303,4 +303,46 @@ export function viaOf(points) {
   const out = [];
   for (const [la, lo] of points) for (const v of VIA) if (v.test(la, lo) && !out.includes(v.name)) out.push(v.name);
   return out;
+}
+
+// slowdownVar({ soil, ice, u, v }, ship) -> a Var "shipslow" on the global grid:
+// for every month, how much slower than calm, ice-free water a ship sails in
+// each sea cell, in percent. Wind counts at its average over all headings
+// (f = 0.6, as abeam); ice as in fastestPath; cells closed by ice are 100.
+// Land and the closed far south are missing. This is the field the lanes are
+// routed through, so it is the map behind them.
+export function slowdownVar({ soil, ice, u, v }, ship = SHIP) {
+  const g = soil.entry.grid, n = g.nlat * g.nlon;
+  const sea = oceanMask(soil, ice);
+  const nt = Math.min(...[soil, ice, u, v].filter(Boolean).map((x) => x.entry.nt));
+  const map = ice && iceMap(g, ice.entry.grid), ni = ice ? ice.entry.grid.nlat * ice.entry.grid.nlon : 0;
+  const is = ice ? ice.entry.scale ?? 1 : 1, io = ice ? ice.entry.offset ?? 0 : 0;
+  const us = u ? u.entry.scale ?? 1 : 1, uo = u ? u.entry.offset ?? 0 : 0, vs = v ? v.entry.scale ?? 1 : 1, vo = v ? v.entry.offset ?? 0 : 0;
+  const data = new Int16Array(nt * n).fill(MISSING);
+  for (let t = 0; t < nt; t++) {
+    for (let c = 0; c < n; c++) {
+      if (!sea[c]) continue;
+      let c2 = 0;
+      if (map && map[c]) {
+        let sum = 0, k = 0;
+        for (const q of map[c]) { const r = ice.data[t * ni + q]; if (r !== MISSING) { sum += r * is + io; k++; } }
+        c2 = k ? sum / k : 0;
+      }
+      let pct;
+      if (c2 > ship.iceBlock) pct = 100;
+      else {
+        const ur = u ? u.data[t * n + c] : MISSING, vr = v ? v.data[t * n + c] : MISSING;
+        const W = ur === MISSING || vr === MISSING ? 0 : Math.hypot(ur * us + uo, vr * vs + vo);
+        const loss = Math.min(ship.maxLoss, ship.windK * W * W * 0.6);
+        pct = 100 * (1 - (1 - loss) / (1 + ship.iceK * c2));
+      }
+      data[t * n + c] = Math.round(pct * 100);
+    }
+  }
+  const entry = {
+    id: "shipslow", file: null, units: "%", start: soil.entry.start, nt, grid: g, scale: 0.01, offset: 0,
+    source: "computed in the browser from MERRA-2 U10M, V10M and FRSEAICE",
+    defaultBand: { min: 10, max: null },
+  };
+  return makeVar(entry, data);
 }

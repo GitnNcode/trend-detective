@@ -34,7 +34,7 @@ const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 // Arctic sea ice is lowest and the polar shortcuts can open.
 const SHIP_MONTHS = [9, 10, 11];
 const DEFAULTS = {
-  mode: "ship", variable: "seaice", regionId: "global", custom: null, months: SHIP_MONTHS, shipForecast: false,
+  mode: "ship", variable: "shipslow", regionId: "global", custom: null, months: SHIP_MONTHS, shipForecast: false,
   band: { min: 10, max: null }, route: "nsr", overlayRoute: null, proj: "auto", cadence: "annual",
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
@@ -148,10 +148,10 @@ function ensureField(v) {
 }
 
 // Shipping routes: every lane's fastest path for every year as thin bands
-// (blue for 1980 through yellow for the latest year; years with the same path
+// (cyan for 1980 through yellow for the latest year; years with the same path
 // share one line in the colour of the latest), the frame year on top in
 // white, and with the prediction on, the next five years dashed in magenta.
-const YEAR_RAMP = ["#2f6bff", "#22a7f0", "#2ec4b6", "#9bd83a", "#ffd60a"];
+const YEAR_RAMP = ["#5ad1ff", "#6ff0d2", "#9cf27a", "#d8f24f", "#ffe14a"];
 function yearColor(f) {
   const x = Math.max(0, Math.min(1, f)) * (YEAR_RAMP.length - 1), k = Math.min(YEAR_RAMP.length - 2, Math.floor(x)), t = x - k;
   const a = YEAR_RAMP[k], b = YEAR_RAMP[k + 1], ch = (h, i) => parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16);
@@ -285,6 +285,11 @@ export async function update(changed = []) {
     }
 
     const vid = fieldVar(s);
+    if (vid === "shipslow" && !D.isLoaded("shipslow")) {
+      const [soil, ice, u, w] = await ensureVars(["soilwet", "seaice", ...(hasVar("u10") && hasVar("v10") ? ["u10", "v10"] : [])]);
+      if (my !== token) return;
+      if (!D.isLoaded("shipslow")) D.registerVar(E.slowdownVar({ soil, ice, u: u ?? null, v: w ?? null }));
+    }
     if (s.mode === "vectors" && s.vecSource === "velocity" && s.cadence === "monthly") { app.set({ cadence: "annual" }); return; }
     const v = (await ensureVars([vid]))[0];
     if (my !== token) return;
@@ -624,7 +629,7 @@ export function applyScene() {
   }
   if (s.mode === "ship" && R.ship) {
     Object.assign(ov, shipOverlay(frameYear(app.t)));
-    scene.iso = 0.15;
+    scene.iso = 99; // red line: the edge of water closed by ice
   }
   if (s.overlayRoute && s.mode !== "route") {
     const r = app.content.routes.find((x) => x.id === s.overlayRoute);
@@ -668,7 +673,7 @@ export const actions = {
   setMode(mode) {
     const s = app.state;
     const patch = { mode, prompt: null };
-    if (mode === "ship") Object.assign(patch, { variable: "seaice", regionId: "global", custom: null, months: SHIP_MONTHS });
+    if (mode === "ship") Object.assign(patch, { variable: "shipslow", regionId: "global", custom: null, months: SHIP_MONTHS });
     else if (s.mode === "ship" && mode !== "route") Object.assign(patch, { variable: "t2m", months: ALL_MONTHS });
     if (mode === "route") Object.assign(patch, { variable: "seaice", regionId: "arctic", custom: null, months: [7, 8, 9, 10], band: { min: null, max: 0.15 }, route: s.route ?? "nsr" });
     if (mode === "band" && s.band.min == null && s.band.max == null) patch.band = varStyle(s.variable).band;
@@ -730,7 +735,7 @@ async function boot() {
   app.map.loadBasemap();
   const [catalog, content] = await Promise.all([D.loadCatalog(), D.loadContent()]);
   app.catalog = catalog;
-  const ok = (id) => !id || catalog.variables.some((v) => v.id === id);
+  const ok = (id) => !id || id === "shipslow" || catalog.variables.some((v) => v.id === id);
   content.usecases = content.usecases.filter((u) => ok(u.variable) && (u.vecSource !== "wind" || (ok("u250") && ok("v250"))));
   content.cases = content.cases.filter((c) => c.steps.every((st) => ok(st.action.variable)));
   app.content = content;

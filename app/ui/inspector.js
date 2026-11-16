@@ -203,7 +203,7 @@ export function renderInspector() {
     const last = sh.years.length - 1, fy = sh.forecast.years.length - 1;
     const nNow = fc ? sh.forecast.lanes.filter((l) => arctic(l.via[fy])).length : counts[last];
     level = "significant";
-    tip = "Each line is the fastest sea path between two ports for one season, from MERRA-2 sea ice and 10 m wind. Blue lines are early years, yellow recent ones.";
+    tip = "Each line is the fastest sea path between two ports for one season, from MERRA-2 sea ice and 10 m wind. Cyan lines are early years, yellow recent ones. The map behind shows how much wind and ice slow a ship.";
     heroEl.innerHTML = hero(fc ? `Predicted for ${sh.forecast.years[fy]}` : `Fastest sea routes, ${sh.years[last]}`, String(nNow), ` of ${sh.lanes.length}`,
       "lanes take an Arctic shortcut", `${esc(monthsLabel(s.months))} · ${sh.inputs.wind ? "sea ice and 10 m wind" : "sea ice only (no surface wind file)"}`);
     heroEl.insertAdjacentHTML("beforeend", `<button class="tb predict ${fc ? "on" : ""}" id="shipFc" title="Project the fastest routes for the next five years from the recent trend in sea ice and wind">${fc ? "Back to past routes" : "Predict next 5 years"}</button>`);

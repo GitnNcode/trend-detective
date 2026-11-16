@@ -112,6 +112,16 @@ export function getVar(id, onProgress) {
   return promise;
 }
 
+// A field computed in the browser (no .bin): add it to the catalog and the
+// cache so every view can use it like a downloaded one.
+export function registerVar(v) {
+  const id = v.entry.id;
+  if (!catalog.variables.some((e) => e.id === id)) catalog.variables.push(v.entry);
+  vars.set(id, v);
+  meter.loaded.add(id);
+  bump();
+}
+
 export function isLoaded(id) { return vars.has(id); }
 export function cachedVar(id) { return vars.get(id) ?? null; }
 

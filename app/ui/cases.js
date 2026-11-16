@@ -34,7 +34,7 @@ export class CasePlayer {
     if (!first) return;
     this.el.hidden = false;
     this.el.innerHTML = `<div class="step">Welcome</div>
-      <div class="txt">Each line on the globe is the fastest sea route between two big ports in one year since 1980, worked out from NASA sea ice and wind data: blue for early years, yellow for recent ones. Press <b>Predict next 5 years</b> to see where the routes are heading, or take the guided tour, <b>${esc(first.title)}</b>.</div>
+      <div class="txt">Each line on the globe is the fastest sea route between two big ports in one year since 1980, worked out from NASA sea ice and wind data: cyan for early years, yellow for recent ones, over a map of how much wind and ice slow ships down. Press <b>Predict next 5 years</b> to see where the routes are heading, or take the guided tour, <b>${esc(first.title)}</b>.</div>
       <div class="ctl"><button class="tb on" data-go>Start tour</button><button class="tb icon" data-x title="Close">✕</button></div>`;
     const done = () => { try { localStorage.setItem("td-hint", "1"); } catch { /* ignore */ } };
     this.el.querySelector("[data-go]").addEventListener("click", () => { done(); this.start(first.id); });

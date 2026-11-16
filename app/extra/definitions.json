@@ -14,6 +14,11 @@
     "plain": "How fast the wind blows toward the north (positive) or south (negative) about 10 km up.",
     "why": "A wavier jet stream has stronger north-south winds, which can bring longer spells of hot or cold weather."
   },
+  "shipslow": {
+    "name": "Ship slowdown from wind and ice",
+    "plain": "How much slower than in calm, ice-free water a ship sails here, in percent. Strong surface wind adds a little; sea ice adds a lot, and water more than half covered in ice is closed (100%). The fastest routes avoid the warm colours.",
+    "why": "As Arctic ice shrinks, the slow and closed water at the top of the world turns to open sea, and new shortcuts appear."
+  },
   "u10": {
     "name": "East-west wind at 10 m",
     "plain": "How fast the wind blows toward the east (positive) or west (negative) just above the sea surface, where it raises waves and slows ships.",
