@@ -2,6 +2,8 @@
 // style of an operational meteorology display: a framed map with lat/lon
 // labels, black coastlines, thin graticule, yellow region box, NHC-style
 // track and cone, and vector arrows for climate velocity.
+// The default view is a 3D globe: the sphere seen through a perspective
+// camera, turned freely by dragging (it keeps spinning briefly on release).
 // Written with Claude and reviewed by the team.
 
 import * as d3 from "d3";
@@ -17,6 +19,66 @@ const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const wrapLon = (l) => ((((l + 180) % 360) + 360) % 360) - 180;
 
+// ---------- 3D globe ----------
+// The camera sits CAM globe radii from the centre, so it sees a cap of
+// LIMB_DEG degrees around the point it looks at (less than a hemisphere,
+// as from a real viewpoint). LIMB_R is the radius of the disc in
+// projection units.
+const CAM = 3.6;
+const LIMB_DEG = Math.acos(1 / CAM) / RAD;
+const LIMB_R = Math.sqrt((CAM - 1) / (CAM + 1));
+const perspR = (c) => ((CAM - 1) * Math.sin(c)) / (CAM - Math.cos(c));
+
+// General (vertical) perspective projection, in d3's raw-projection form.
+function perspectiveRaw(lam, phi) {
+  const cp = Math.cos(phi), k = (CAM - 1) / (CAM - cp * Math.cos(lam));
+  return [k * cp * Math.sin(lam), k * Math.sin(phi)];
+}
+perspectiveRaw.invert = (x, y) => {
+  const r2 = x * x + y * y, rho = Math.sqrt(r2);
+  const sc = (CAM - Math.sqrt(1 - (r2 * (CAM + 1)) / (CAM - 1))) / ((CAM - 1) / rho + rho / (CAM - 1));
+  return [Math.atan2(x * sc, rho * Math.sqrt(1 - sc * sc)), rho ? Math.asin((y * sc) / rho) : 0];
+};
+
+// Unit quaternions for d3's three-axis rotation angles [lambda, phi, gamma]
+// (the "versor" formulation used for dragging a globe by a point on it).
+const qFromAngles = ([l, f, g]) => {
+  l *= RAD / 2; f *= RAD / 2; g *= RAD / 2;
+  const sl = Math.sin(l), cl = Math.cos(l), sp = Math.sin(f), cp = Math.cos(f), sg = Math.sin(g), cg = Math.cos(g);
+  return [cl * cp * cg + sl * sp * sg, sl * cp * cg - cl * sp * sg, cl * sp * cg + sl * cp * sg, cl * cp * sg - sl * sp * cg];
+};
+const qToAngles = (q) => [
+  Math.atan2(2 * (q[0] * q[1] + q[2] * q[3]), 1 - 2 * (q[1] * q[1] + q[2] * q[2])) / RAD,
+  Math.asin(clamp(2 * (q[0] * q[2] - q[3] * q[1]), -1, 1)) / RAD,
+  Math.atan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] * q[2] + q[3] * q[3])) / RAD,
+];
+const qMul = (a, b) => [
+  a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+  a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+  a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+  a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
+];
+// Rotation that carries unit vector v0 onto v1 along the great circle.
+const qDelta = (v0, v1) => {
+  const w = [v0[1] * v1[2] - v0[2] * v1[1], v0[2] * v1[0] - v0[0] * v1[2], v0[0] * v1[1] - v0[1] * v1[0]];
+  const l = Math.hypot(w[0], w[1], w[2]);
+  if (!l) return [1, 0, 0, 0];
+  const t = Math.acos(clamp(v0[0] * v1[0] + v0[1] * v1[1] + v0[2] * v1[2], -1, 1)) / 2, sn = Math.sin(t);
+  return [Math.cos(t), (w[2] / l) * sn, (-w[1] / l) * sn, (w[0] / l) * sn];
+};
+const cartesian = ([lon, lat]) => { const cf = Math.cos(lat * RAD); return [cf * Math.cos(lon * RAD), cf * Math.sin(lon * RAD), Math.sin(lat * RAD)]; };
+const rotOf = (v) => [-v.lon, -v.lat, v.roll ?? 0];
+const viewOfRot = (r) => ({ lon: wrapLon(-r[0]), lat: -r[1], roll: r[2] });
+
+// Column-major 3x3 matrix taking a view-space unit vector to a geographic
+// one, for the shader (d3's rotation is linear, so three samples define it).
+function rotationMatrix(rot) {
+  const inv = d3.geoRotation(rot).invert;
+  return new Float32Array([...cartesian(inv([0, 0])), ...cartesian(inv([90, 0])), ...cartesian(inv([0, 90]))]);
+}
+
+const COMPASS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 11 8H5z" fill="#ff3b30"/><path d="M5 8h6l-3 6.4z" fill="#aeaeb2"/></svg>`;
+
 export class MapView {
   constructor(root, handlers = {}) {
     this.root = root;
@@ -28,9 +90,19 @@ export class MapView {
     this.base = document.createElement("canvas");
     this.baseCtx = this.base.getContext("2d");
     this.kind = "flat";
-    this.view = { lon: 0, lat: 0, zoom: 1 };
+    this.view = { lon: 0, lat: 0, roll: 0, zoom: 1 };
     this.polarSouth = false;
     this.fly = null;
+    this.spin = null;
+    this.compass = document.createElement("button");
+    this.compass.type = "button";
+    this.compass.className = "compass no-map-events";
+    this.compass.title = "Turn north up";
+    this.compass.setAttribute("aria-label", "Turn north up");
+    this.compass.innerHTML = COMPASS;
+    this.compass.hidden = true;
+    this.compass.addEventListener("click", () => this.flyTo({ roll: 0 }, 500));
+    root.appendChild(this.compass);
     this.t = 0;
     this.layers = 1;
     this.norm = { min: 0, max: 1 };
@@ -80,7 +152,12 @@ export class MapView {
     const m = Math.min(fw, fh);
     let p;
     if (kind === "globe") {
-      p = d3.geoOrthographic().rotate([-view.lon, -view.lat]).scale(m * 0.46 * view.zoom).translate([cx, cy]).clipAngle(90).precision(0.6);
+      const base = d3.geoProjection(perspectiveRaw).rotate(rotOf(view)).scale((m * 0.46 * view.zoom) / LIMB_R).translate([cx, cy]).clipAngle(LIMB_DEG - 1e-4).precision(0.6);
+      // d3 projects points on the far side too; hide them, so pins, tracks
+      // and labels behind the globe are not drawn through it.
+      const centre = [view.lon, view.lat], lim = LIMB_DEG * RAD;
+      p = Object.assign((ll) => (d3.geoDistance(ll, centre) > lim ? null : base(ll)), base);
+      p._clipDeg = LIMB_DEG;
     } else if (kind === "polar") {
       const clipDeg = 50;
       const k = (m * 0.5 * 0.94) / Math.tan((clipDeg * RAD) / 2) * view.zoom;
@@ -101,8 +178,9 @@ export class MapView {
     this.polarSouth = south;
     if (kind === "polar") this.view = { lon: 0, lat: south ? -90 : 90, zoom: 1 };
     if (kind === "flat") this.view = { lon: this.view.lon, lat: 0, zoom: 1 };
-    if (kind === "globe") this.view = { lon: this.view.lon, lat: clamp(this.view.lat, -60, 60), zoom: 1 };
+    if (kind === "globe") this.view = { lon: this.view.lon, lat: clamp(this.view.lat, -60, 60), roll: 0, zoom: 1 };
     this.fly = null;
+    this.spin = null;
     this.baseDirty = true;
     this.requestRender();
   }
@@ -110,7 +188,15 @@ export class MapView {
   flyTo(target, ms = 900) {
     const from = { ...this.view };
     const to = { ...from, ...target };
+    this.spin = null;
     this.fly = { from, to: { ...to, lon: from.lon + wrapLon(to.lon - from.lon) }, t0: performance.now(), ms };
+    // The globe turns along the shortest arc between the two orientations.
+    if (this.kind === "globe") {
+      const q0 = qFromAngles(rotOf(from));
+      let q1 = qFromAngles(rotOf(to));
+      if (q0[0] * q1[0] + q0[1] * q1[1] + q0[2] * q1[2] + q0[3] * q1[3] < 0) q1 = q1.map((x) => -x);
+      this.fly.q0 = q0; this.fly.q1 = q1;
+    }
     this.requestRender();
   }
 
@@ -123,8 +209,20 @@ export class MapView {
     const global = span >= 359 && latSpan >= 170;
     let target;
     if (this.kind === "globe") {
-      const ang = Math.max(latSpan, span * Math.cos(latMid * RAD));
-      target = global ? { lon: 0, lat: 15, zoom: 1 } : { lon: lonMid, lat: clamp(latMid, -70, 70), zoom: clamp(80 / Math.max(ang, 8), 1, 5) };
+      const ring = span >= 359;
+      if (global) target = { lon: 0, lat: 15, zoom: 1 };
+      else if (ring && (latMin >= 40 || latMax <= -40)) {
+        // A cap around a pole: look straight down on it.
+        const north = latMin >= 40;
+        target = { lon: 0, lat: north ? 90 : -90, zoom: globeZoom(90 - (north ? latMin : -latMax)) };
+      } else if (ring) target = { lon: 0, lat: clamp(latMid, -60, 60), zoom: 1 };
+      else {
+        // Angular radius of the box about its centre, from points on its edge.
+        let ang = 0;
+        for (const la of [latMin, latMid, latMax]) for (const f of [0, 0.5, 1]) ang = Math.max(ang, d3.geoDistance([lonMid, latMid], [region.lonMin + span * f, la]) / RAD);
+        target = { lon: lonMid, lat: latMid, zoom: globeZoom(ang) };
+      }
+      target.roll = 0;
     } else if (this.kind === "flat") {
       target = global || span >= 359 ? { lon: 0, lat: span >= 359 ? clamp(latMid, -60, 60) * (latSpan < 120 ? 1 : 0) : 0, zoom: global ? 1 : clamp(180 / (latSpan * 1.25), 1, 3) } : { lon: lonMid, lat: latMid, zoom: clamp(Math.min(360 / (span * 1.5), 180 / (latSpan * 1.6)), 1, 9) };
     } else {
@@ -184,8 +282,9 @@ export class MapView {
         if (ll) drag = { draw: true, start: ll, sx: pt.x, sy: pt.y, cur: ll };
         return;
       }
-      drag = { x: pt.x, y: pt.y, sx: pt.x, sy: pt.y, moved: false };
+      drag = { x: pt.x, y: pt.y, sx: pt.x, sy: pt.y, moved: false, vx: 0, vy: 0, t: performance.now() };
       this.fly = null;
+      this.spin = null;
       el.classList.add("dragging");
     });
     el.addEventListener("pointermove", (e) => {
@@ -207,9 +306,13 @@ export class MapView {
       }
       const dx = pt.x - drag.x, dy = pt.y - drag.y;
       if (Math.hypot(pt.x - drag.sx, pt.y - drag.sy) > 3) drag.moved = true;
+      const now = performance.now(), dt = Math.max(1, now - drag.t);
+      drag.vx = 0.6 * drag.vx + 0.4 * (dx / dt); drag.vy = 0.6 * drag.vy + 0.4 * (dy / dt);
+      drag.t = now;
       drag.x = pt.x; drag.y = pt.y;
       this.lowRes = true;
-      this._panBy(dx, dy, pt);
+      if (this.kind === "globe") this._spinBy({ x: pt.x - dx, y: pt.y - dy }, pt);
+      else this._panBy(dx, dy, pt);
     });
     const end = (e) => {
       if (!drag) return;
@@ -222,9 +325,15 @@ export class MapView {
       } else if (!drag.moved) {
         const ll = this.invert(pt.x, pt.y);
         if (ll) this.handlers.onClick?.(ll, pt);
+      } else if (this.kind === "globe" && performance.now() - drag.t < 70 && Math.hypot(drag.vx, drag.vy) > 0.12) {
+        // Released while moving: let the globe coast, as if still turned
+        // from a point part-way between the release point and the centre.
+        const [cx, cy] = this.projection().translate();
+        const v = Math.hypot(drag.vx, drag.vy), cap = Math.min(1, 1.4 / v);
+        this.spin = { x: cx + (pt.x - cx) * 0.5, y: cy + (pt.y - cy) * 0.5, vx: drag.vx * cap, vy: drag.vy * cap, t: performance.now() };
       }
       drag = null;
-      this.lowRes = false;
+      this.lowRes = !!this.spin;
       this.baseDirty = true;
       this.requestRender();
     };
@@ -256,10 +365,7 @@ export class MapView {
   _panBy(dx, dy, pt) {
     const p = this.projection();
     const k = p.scale();
-    if (this.kind === "globe") {
-      this.view.lon -= (dx / k) / RAD;
-      this.view.lat = clamp(this.view.lat + (dy / k) / RAD, -85, 85);
-    } else if (this.kind === "flat") {
+    if (this.kind === "flat") {
       this.view.lon -= (dx / k) / RAD;
       this.view.lat = clamp(this.view.lat + (dy / k) / RAD, -80, 80);
     } else if (pt) {
@@ -268,6 +374,31 @@ export class MapView {
       this.view.lon += ((a2 - a1) / RAD) * (this.polarSouth ? -1 : 1);
     }
     this.view.lon = wrapLon(this.view.lon);
+    this.baseDirty = true;
+    this.requestRender();
+  }
+
+  // Geographic point under a screen point on the globe. Points off the disc
+  // are pulled back to just inside its edge, so a drag that leaves the globe
+  // keeps turning it.
+  _onGlobe(p, pt) {
+    const [cx, cy] = p.translate(), R = p.scale() * LIMB_R * 0.97;
+    let dx = pt.x - cx, dy = pt.y - cy;
+    const d = Math.hypot(dx, dy);
+    if (d > R) { dx *= R / d; dy *= R / d; }
+    const ll = p.invert([cx + dx, cy + dy]);
+    return ll && Number.isFinite(ll[0]) && Number.isFinite(ll[1]) ? ll : null;
+  }
+
+  // Turn the globe so the surface point under screen point `a` moves to
+  // screen point `b`. Any axis is allowed, so the globe can be tipped over
+  // the poles; the compass button turns north back up.
+  _spinBy(a, b) {
+    const p = this.projection();
+    const ga = this._onGlobe(p, a), gb = this._onGlobe(p, b);
+    if (!ga || !gb) return;
+    const q = qMul(qFromAngles(rotOf(this.view)), qDelta(cartesian(ga), cartesian(gb)));
+    this.view = { ...viewOfRot(qToAngles(q)), zoom: this.view.zoom };
     this.baseDirty = true;
     this.requestRender();
   }
@@ -286,12 +417,26 @@ export class MapView {
   _frame(now) {
     if (this.fly) {
       const f = clamp((now - this.fly.t0) / this.fly.ms, 0, 1), e = ease(f);
-      const { from, to } = this.fly;
-      this.view = { lon: wrapLon(from.lon + (to.lon - from.lon) * e), lat: from.lat + (to.lat - from.lat) * e, zoom: from.zoom + (to.zoom - from.zoom) * e };
+      const { from, to, q0, q1 } = this.fly;
+      const zoom = from.zoom + (to.zoom - from.zoom) * e;
+      if (q0 && f < 1) {
+        const q = q0.map((x, k) => x + (q1[k] - x) * e), n = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
+        this.view = { ...viewOfRot(qToAngles(q.map((x) => x / n))), zoom };
+      } else {
+        this.view = { lon: wrapLon(from.lon + (to.lon - from.lon) * e), lat: from.lat + (to.lat - from.lat) * e, roll: (from.roll ?? 0) + ((to.roll ?? 0) - (from.roll ?? 0)) * e, zoom };
+      }
       this.lowRes = f < 1;
       this.baseDirty = true;
       this.dirty = true;
       if (f >= 1) this.fly = null;
+    }
+    if (this.spin) {
+      const sp = this.spin, dt = Math.min(40, Math.max(0, now - sp.t));
+      sp.t = now;
+      this._spinBy({ x: sp.x, y: sp.y }, { x: sp.x + sp.vx * dt, y: sp.y + sp.vy * dt });
+      const decay = Math.exp(-dt / 240);
+      sp.vx *= decay; sp.vy *= decay;
+      if (Math.hypot(sp.vx, sp.vy) < 0.02) { this.spin = null; this.lowRes = false; this.baseDirty = true; this.dirty = true; }
     }
     if (this.dirty) { this.dirty = false; this._render(); }
   }
@@ -305,7 +450,7 @@ export class MapView {
     const f = this.frame();
     this.gl.draw({
       dpr, proj: this.kind === "flat" ? 0 : this.kind === "globe" ? 1 : 2,
-      k: k * dpr, tx: tx * dpr, ty: ty * dpr, rotL: rot[0] * RAD, rotP: rot[1] * RAD,
+      k: k * dpr, tx: tx * dpr, ty: ty * dpr, rotM: rotationMatrix(rot), cam: CAM,
       clip: (p._clipDeg ?? 180) * RAD,
       frame: [f.x0 * dpr, f.y0 * dpr, f.x1 * dpr, f.y1 * dpr],
       layerA, layerB: Math.min(this.layers - 1, layerA + 1), mix: s.noBlend ? 0 : mix,
@@ -318,6 +463,21 @@ export class MapView {
       nodata: [0.84, 0.84, 0.84],
     });
     this._drawOverlay(p);
+    this._updateCompass(p);
+  }
+
+  // The compass shows which way north points at the centre of the globe and
+  // appears only once the globe has been tipped away from north-up.
+  _updateCompass(p) {
+    let deg = 0;
+    if (this.kind === "globe") {
+      const { lon, lat } = this.view, up = lat < 89;
+      const a = p([lon, lat]), b = p([lon, lat + (up ? 1 : -1)]);
+      if (a && b) deg = Math.atan2((b[0] - a[0]) * (up ? 1 : -1), -(b[1] - a[1]) * (up ? 1 : -1)) / RAD;
+    }
+    const show = Math.abs(deg) > 1.5 && !this.fly;
+    if (this.compass.hidden === show) this.compass.hidden = !show;
+    if (show) this.compass.firstElementChild.style.transform = `rotate(${deg.toFixed(1)}deg)`;
   }
 
   _drawBase(p) {
@@ -365,7 +525,37 @@ export class MapView {
       path({ type: "Sphere" });
       ctx.stroke();
       if (this.kind === "polar") this._polarLabels(ctx, p);
+      else if (this.options.grid && !this.lowRes) this._globeLabels(ctx, p);
     }
+  }
+
+  // Lat/lon labels on the globe: meridians are named along a parallel near
+  // the centre of the view, parallels along a meridian near it.
+  _globeLabels(ctx, p) {
+    const step = this._gridStep(p);
+    const c = [this.view.lon, this.view.lat];
+    const placed = [];
+    ctx.font = MONO;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    const put = (text, ll) => {
+      if (d3.geoDistance(ll, c) / RAD > LIMB_DEG - 14) return;
+      const xy = p(ll);
+      if (!xy || placed.some((q) => Math.hypot(q[0] - xy[0], q[1] - xy[1]) < 30)) return;
+      placed.push(xy);
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 3;
+      ctx.strokeText(text, xy[0], xy[1]);
+      ctx.fillStyle = "#222";
+      ctx.fillText(text, xy[0], xy[1]);
+    };
+    // Looking down on a pole, the meridians are named well away from it,
+    // where they have spread apart.
+    const row = Math.abs(c[1]) > 60 ? Math.sign(c[1]) * (90 - step * 3.5) : Math.floor(c[1] / step) * step + step / 2;
+    const col = Math.floor(c[0] / step) * step + step / 2;
+    for (let lat = Math.ceil(-89 / step) * step; lat < 90; lat += step) put(lat === 0 ? "EQ" : `${Math.abs(lat)}${lat < 0 ? "S" : "N"}`, [col, lat]);
+    for (let lon = -180; lon < 180; lon += step) put(lon === 0 ? "0" : lon === -180 ? "180" : `${Math.abs(lon)}${lon < 0 ? "W" : "E"}`, [lon, row]);
   }
 
   _gridStep(p) {
@@ -665,6 +855,15 @@ export class MapView {
     ctx.drawImage(this.ovCanvas, 0, 0);
     return c;
   }
+}
+
+// Zoom for a cap of the given angular radius (degrees). Large regions keep
+// the whole ball in view (zoom up to 1.08 still fits the frame); only small
+// ones bring the camera in, toward the zoom at which the cap fills the view.
+function globeZoom(angDeg) {
+  const a = Math.min(angDeg * 1.25 + 3, LIMB_DEG) * RAD;
+  const fill = clamp(LIMB_R / perspR(a), 1, 6);
+  return fill <= 1.6 ? 1 + ((fill - 1) / 0.6) * 0.08 : 1.08 + (fill - 1.6) * 0.9;
 }
 
 function sampleUV(V, g, lat, lon) {

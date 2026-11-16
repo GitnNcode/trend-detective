@@ -187,13 +187,11 @@ export function setPlaying(p) {
 }
 
 // ---------- projection ----------
+// Every product opens on the 3D globe; the flat and polar maps stay
+// available from the Display menu.
 function autoProjection(s, region) {
   if (s.proj !== "auto") return { kind: s.proj, south: region.latMax <= -50 };
-  if (s.mode === "compare") return { kind: "flat", south: false };
-  if (s.variable === "seaice" || s.mode === "route") return { kind: "polar", south: false };
-  if (region.latMin >= 55 && region.latMax - region.latMin < 50) return { kind: "polar", south: false };
-  if (region.latMax <= -55) return { kind: "polar", south: true };
-  return { kind: "flat", south: false };
+  return { kind: "globe", south: false };
 }
 
 function framingRegion(s, region) {
@@ -202,9 +200,11 @@ function framingRegion(s, region) {
     if (b && region.type !== "global") {
       const span = (r) => [r.lonMin, r.lonMax];
       const lons = [...span(region), ...span(b)];
+      // Two regions too far apart to share one side of the globe: face the first.
+      if (app.map.kind === "globe" && (Math.max(...lons) - Math.min(...lons) > 110 || Math.max(region.latMax, b.latMax) - Math.min(region.latMin, b.latMin) > 110)) return region;
       return { latMin: Math.min(region.latMin, b.latMin), latMax: Math.max(region.latMax, b.latMax), lonMin: Math.min(...lons), lonMax: Math.max(...lons) };
     }
-    return { latMin: -90, latMax: 90, lonMin: -180, lonMax: 180 };
+    return app.map.kind === "globe" ? region : { latMin: -90, latMax: 90, lonMin: -180, lonMax: 180 };
   }
   if (s.mode === "twin") {
     const h = s.twin ?? defaultTwin();

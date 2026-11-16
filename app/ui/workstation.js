@@ -65,7 +65,7 @@ export function renderMenubar() {
     ] },
     { id: "display", label: "Display", items: [
       { hdr: "Projection" },
-      ...[["auto", "Automatic"], ["flat", "Cylindrical equidistant"], ["globe", "Orthographic"], ["polar", "Polar stereographic"]].map(([k, l]) => ({ label: l, mark: radio(s.proj === k), act: () => actions.set({ proj: k }) })),
+      ...[["auto", "3D globe"], ["flat", "Flat map (cylindrical equidistant)"], ["polar", "Polar stereographic"]].map(([k, l]) => ({ label: l, mark: radio(s.proj === k || (k === "auto" && s.proj === "globe")), act: () => actions.set({ proj: k }) })),
       { sep: true }, { hdr: "Fill" },
       { label: "Shaded contours", mark: radio(!s.cells), act: () => actions.set({ cells: false }) },
       { label: "Grid cells", mark: radio(s.cells), act: () => actions.set({ cells: true }) },

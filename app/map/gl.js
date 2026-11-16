@@ -1,6 +1,6 @@
 // WebGL2 field renderer. A full-screen fragment shader inverse-projects each
-// pixel (cylindrical equidistant, orthographic or polar stereographic, using
-// d3-geo's conventions), samples the data from a texture array (one layer per
+// pixel (cylindrical equidistant, the 3D globe seen through a perspective
+// camera, or polar stereographic, using d3-geo's conventions), samples the data from a texture array (one layer per
 // year or month), and draws it the way operational meteorology displays do:
 // discrete color steps with crisp contour edges (or raw grid cells), thin
 // contour lines, hatching for non-significant cells, and for Shift mode a
@@ -17,10 +17,11 @@ precision highp sampler2DArray;
 
 uniform vec2 u_res;
 uniform float u_dpr;
-uniform int u_proj;        // 0 cylindrical, 1 orthographic, 2 stereographic
+uniform int u_proj;        // 0 cylindrical, 1 globe (perspective), 2 stereographic
 uniform float u_k;
 uniform vec2 u_t;
-uniform vec2 u_rot;
+uniform mat3 u_rotM;       // view-space unit vector -> geographic unit vector
+uniform float u_cam;       // globe: camera distance from the centre, in globe radii
 uniform float u_clip;
 uniform vec4 u_frame;      // device px: x0, y0, x1, y1 (top-left origin)
 
@@ -67,28 +68,39 @@ uniform vec3 u_nodata;
 out vec4 outColor;
 const float PI = 3.141592653589793;
 
-bool inverseProject(vec2 p, out vec2 ll) {
+// mu: cosine of the angle between the surface normal and the line of sight
+// (1 facing the camera, 0 at the limb). edge: distance to the limb in
+// projection units. Both are only meaningful on the globe.
+bool inverseProject(vec2 p, out vec2 ll, out float mu, out float edge) {
   float rho = length(p);
   float lam, phi;
+  mu = 1.0; edge = 1e6;
   if (u_proj == 0) {
     if (abs(p.x) > PI || abs(p.y) > PI * 0.5) return false;
     lam = p.x; phi = p.y;
   } else {
-    float c;
-    if (u_proj == 1) { if (rho > 1.0) return false; c = asin(rho); }
-    else { c = 2.0 * atan(rho); if (c > u_clip) return false; }
-    float sc = sin(c), cc = cos(c);
+    float sc, cc;
+    if (u_proj == 1) {
+      // General perspective projection of a unit sphere from distance u_cam.
+      float lim = (u_cam - 1.0) / (u_cam + 1.0);
+      float r2 = rho * rho;
+      edge = sqrt(lim) - rho;
+      if (r2 >= lim) return false;
+      sc = rho > 1e-9 ? (u_cam - sqrt(1.0 - r2 / lim)) / ((u_cam - 1.0) / rho + rho / (u_cam - 1.0)) : 0.0;
+      sc = clamp(sc, 0.0, 1.0);
+      cc = sqrt(1.0 - sc * sc);
+      mu = clamp((u_cam * cc - 1.0) / sqrt(u_cam * u_cam - 2.0 * u_cam * cc + 1.0), 0.0, 1.0);
+    } else {
+      float c = 2.0 * atan(rho);
+      if (c > u_clip) return false;
+      sc = sin(c); cc = cos(c);
+    }
     lam = atan(p.x * sc, rho * cc);
     phi = rho > 1e-9 ? asin(clamp(p.y * sc / rho, -1.0, 1.0)) : 0.0;
   }
   float cp = cos(phi);
-  vec3 q = vec3(cos(lam) * cp, sin(lam) * cp, sin(phi));
-  float cd = cos(u_rot.y), sd = sin(u_rot.y);
-  float l2 = atan(q.y, q.x * cd + q.z * sd);
-  float p2 = asin(clamp(q.z * cd - q.x * sd, -1.0, 1.0));
-  l2 -= u_rot.x;
-  l2 = mod(l2 + PI, 2.0 * PI) - PI;
-  ll = vec2(degrees(l2), degrees(p2));
+  vec3 g = u_rotM * vec3(cos(lam) * cp, sin(lam) * cp, sin(phi));
+  ll = vec2(degrees(atan(g.y, g.x)), degrees(asin(clamp(g.z, -1.0, 1.0))));
   return true;
 }
 
@@ -133,7 +145,8 @@ void main() {
   vec2 frag = vec2(gl_FragCoord.x, u_res.y - gl_FragCoord.y);
   vec2 p = vec2((frag.x - u_t.x) / u_k, (u_t.y - frag.y) / u_k);
   vec2 ll = vec2(0.0);
-  bool ok = inverseProject(p, ll);
+  float mu = 1.0, edge = 1e6;
+  bool ok = inverseProject(p, ll, mu, edge);
 
   vec2 uv = vec2(((ll.x - u_grid.z) / u_grid.w + 0.5) / u_gsize.x,
                  ((ll.y - u_grid.x) / u_grid.y + 0.5) / u_gsize.y);
@@ -242,7 +255,14 @@ void main() {
     col = mix(mix(col, vec3(1.0), 0.6), col, r);
   }
 
-  outColor = vec4(col, 1.0);
+  float alpha = 1.0;
+  if (u_proj == 1) {
+    // Sphere shading: darken toward the limb so the disc reads as a ball,
+    // and fade the last pixel so the silhouette is not jagged.
+    col *= 1.0 - 0.5 * pow(1.0 - mu, 2.6);
+    alpha = clamp(edge * u_k / u_dpr, 0.0, 1.0);
+  }
+  outColor = vec4(col * alpha, alpha);
 }`;
 
 function compile(gl, type, src) {
@@ -395,7 +415,8 @@ export class FieldRenderer {
     i1("u_proj", p.proj);
     f1("u_k", p.k);
     f2("u_t", p.tx, p.ty);
-    f2("u_rot", p.rotL, p.rotP);
+    if (u.u_rotM) gl.uniformMatrix3fv(u.u_rotM, false, p.rotM);
+    f1("u_cam", p.cam ?? 3.6);
     f1("u_clip", p.clip ?? Math.PI);
     const fr = p.frame ?? [0, 0, this.canvas.width, this.canvas.height];
     f4("u_frame", fr[0], fr[1], fr[2], fr[3]);
