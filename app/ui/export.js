@@ -3,6 +3,7 @@
 // Written with Claude and reviewed by the team.
 
 import { defOf, unitsOf, seasonCode } from "../main.js";
+import { analogKm } from "./inspector.js";
 
 const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
 
@@ -64,7 +65,7 @@ function statsLine(app) {
   if (s.mode === "flow" && R.flowSummary) return `Climate velocity: median ${R.flowSummary.medianKmPerDecade.toPrecision(3)} km/decade, mean ${R.flowSummary.meanKmPerDecade.toPrecision(3)} km/decade over the region.`;
   if (s.mode === "twin" && R.twin) {
     const t = R.twin.thenNow, n = R.twin.nowWas;
-    return `1980s climate now ${Number.isFinite(t.distKm) ? Math.round(t.distKm) + " km " + t.bearingName : "not found"} (${t.quality}); today's climate was ${Number.isFinite(n.distKm) ? Math.round(n.distKm) + " km " + n.bearingName : "not found"} in the 1980s (${n.quality}).`;
+    return `1980s climate now ${analogKm(t) != null ? "about " + analogKm(t) + " km " + t.bearingName : "has no close match"} (${t.quality}); today's climate was ${analogKm(n) != null ? "about " + analogKm(n) + " km " + n.bearingName : "not closely matched"} in the 1980s (${n.quality}).`;
   }
   const v = R.verdict;
   const pct = /0 to 1/.test(unitsOf(s.variable));

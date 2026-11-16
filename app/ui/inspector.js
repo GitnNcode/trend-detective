@@ -126,6 +126,12 @@ function pCards(pT, pMK, n) {
   return one("t-test", pT) + one("Mann–Kendall", pMK);
 }
 
+// ponytail: grid cells are ~200 km, so hide poor matches and anything under a cell, round the rest to 50 km.
+export function analogKm(p) {
+  if (!p || p.quality === "poor" || !Number.isFinite(p.distKm) || p.distKm < 200) return null;
+  return Math.round(p.distKm / 50) * 50;
+}
+
 function detectionCard(det) {
   if (!det || !app.A) return "";
   const done = det.status === "detectable";
@@ -134,7 +140,7 @@ function detectionCard(det) {
   const frac = Number.isFinite(det.nStar) ? det.nYears / det.nStar : 0;
   return card("clock", "Detection", `<div class="wrow"><div class="wbig">${big}</div><div class="wword">${word}</div></div>
     ${gaugeBar(Math.min(1, frac), { stops: ["#ff453a", "#ff9f0a", "#ffd60a", "#34c759"] })}
-    <div class="wcap">${Math.round(det.nYears)} of ${Number.isFinite(det.nStar) && det.nStar < 999 ? Math.round(det.nStar) : "∞"} years needed to detect a trend this size</div>`);
+    <div class="wcap">${Number.isFinite(det.nStar) && det.nStar < 999 ? `${Math.round(det.nStar)} years needed to detect a trend this size; the record has ${Math.round(det.nYears)}` : `A trend this size may never be detectable; the record has ${Math.round(det.nYears)} years`}</div>`);
 }
 
 function hero(place, big, unit, line1, line2) {
@@ -204,8 +210,11 @@ export function renderInspector() {
     const tw = R.twin, h = R.home, tn = tw.thenNow, nw = tw.nowWas;
     level = tn.quality === "good" ? "significant" : tn.quality === "fair" ? "suggestive" : "none";
     const near = (p) => nearestCityName(app, p.lat, p.lon, 450);
-    heroEl.innerHTML = hero(h.name ?? "Selected point", Number.isFinite(tn.distKm) ? fmtNum(tn.distKm, 3) : "—", " km", `1980s climate now lies ${esc(tn.bearingName || "—")}`, near(tn) ? `near ${esc(near(tn))} · ${tn.quality} match` : `${tn.quality} match`);
-    A.innerHTML = card("pin", "Today's climate", `<div class="wbig">${Number.isFinite(nw.distKm) ? fmtNum(nw.distKm, 3) + " km" : "—"}</div><div class="wcap">${esc(nw.bearingName || "")} in the 1980s${near(nw) ? `, near ${esc(near(nw))}` : ""} · ${nw.quality}</div>`, { half: true })
+    const tOk = analogKm(tn) != null, nOk = analogKm(nw) != null;
+    heroEl.innerHTML = tOk
+      ? hero(h.name ?? "Selected point", analogKm(tn), " km", `1980s climate now lies ${esc(tn.bearingName || "—")}`, near(tn) ? `near ${esc(near(tn))} · ${tn.quality} match` : `${tn.quality} match`)
+      : hero(h.name ?? "Selected point", "—", "", "No close match for the 1980s climate", tn.quality === "poor" ? "nearest candidates are poor matches" : "within one grid cell (about 200 km) or not found");
+    A.innerHTML = card("pin", "Today's climate", nOk ? `<div class="wbig">${analogKm(nw)} km</div><div class="wcap">${esc(nw.bearingName || "")} in the 1980s${near(nw) ? `, near ${esc(near(nw))}` : ""} · ${nw.quality}</div>` : `<div class="wbig">—</div><div class="wcap">no close match in the 1980s</div>`, { half: true })
       + card("trend", "Warming", `<div class="wbig">${signed(tw.home.drift.dT, 2)}°</div><div class="wcap">mean temperature, 1980s → now</div>`, { half: true });
     chartTitle = "Monthly temperature"; chartRight = `${tw.periods.base.join("–")} vs ${tw.periods.recent.join("–")}`;
     spec = twinSeasonal(R);
