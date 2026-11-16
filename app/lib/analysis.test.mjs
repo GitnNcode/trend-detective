@@ -530,7 +530,7 @@ test("real MERRA-2 data: every function runs fast with no NaN text", { skip: hav
   // Lineup in several regions.
   for (const id of ["arctic", "sahel", "amazon", "natlantic", "siberia", "global"]) {
     const rows = time(`lineup(${id})`, () => A.lineup(vars, id === "global" ? null : regions[id]));
-    assert.equal(rows.length, 10);
+    assert.equal(rows.length, catalog.variables.length);
     for (const row of rows) {
       noBadText(row.verdict.sentence, `${id} ${row.id}`);
       noBadText(A.detectionSentence(row.detection, row.units), `${id} ${row.id} detection`);
