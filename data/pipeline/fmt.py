@@ -33,6 +33,9 @@ VARIABLES = {
     "aod":     ("M2TMNXAER", ["TOTEXTTAU"], "AOD", GLOBAL_GRID, {"min": 0.3, "max": None}),
     # Height of the 0 °C level (m above sea level), from T2M, T500, H500 and surface height.
     "fzlev":   ("M2TMNXSLV", ["T2M", "T500", "H500"], "m", GLOBAL_GRID, {"min": 4000, "max": None}),
+    # Added for the shipping-route product: surface (10 m) wind, which drives waves and ship speed loss.
+    "u10":     ("M2TMNXSLV", ["U10M"], "m/s", GLOBAL_GRID, {"min": 5, "max": None}),
+    "v10":     ("M2TMNXSLV", ["V10M"], "m/s", GLOBAL_GRID, {"min": 5, "max": None}),
 }
 CONST = ("M2C0NXASM", ["FROCEAN", "PHIS"])  # ocean fraction (masks land out of seaice); surface geopotential (fzlev)
 

@@ -159,6 +159,24 @@ function bestPathCard(bp) {
 }
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// Shipping routes: one row per lane. History: days at sea in the latest year,
+// change from the 1980s mean, passages used. Prediction: the last projected
+// year, and how many of the five projected years use an Arctic route.
+function shipRows(sh, fc) {
+  const last = sh.years.length - 1, early = sh.years.map((y, k) => k).filter((k) => sh.years[k] < 1990);
+  const short = (via) => via.map((x) => ({ "Northern Sea Route": "NSR", "Northwest Passage": "NWP", "Cape of Good Hope": "Cape", "Cape Horn": "Horn" })[x] ?? x).join(" · ") || "open sea";
+  const rows = sh.lanes.map((l, i) => {
+    const f = sh.forecast.lanes[i];
+    if (fc) {
+      const fy = f.days.length - 1, nA = f.via.filter((v) => v.includes("Northern Sea Route") || v.includes("Northwest Passage")).length;
+      return `<div class="wship"><span title="${esc(l.cargo)}">${esc(l.name)}</span><b>${fmtNum(f.days[fy], 3)} d</b><em>${nA ? `${nA}/5 yr Arctic` : ""}</em><i>${f.paths[fy] ? esc(short(f.via[fy])) : "blocked by ice"}</i></div>`;
+    }
+    const base = avg(early.map((k) => l.days[k]).filter(Number.isFinite)), d = l.days[last] - base;
+    return `<div class="wship"><span title="${esc(l.cargo)}">${esc(l.name)}</span><b>${fmtNum(l.days[last], 3)} d</b><em class="${d < -0.05 ? "dn" : d > 0.05 ? "up" : ""}">${Number.isFinite(d) ? signed(d, 2) + " d" : "new"}</em><i>${l.paths[last] ? esc(short(l.via[last])) : "blocked by ice"}</i></div>`;
+  });
+  return rows.join("") + `<div class="wcap">${fc ? "days at sea in the last projected year · Arctic years out of five · route" : `days at sea in ${sh.years[last]} · change from the 1980s · route`}</div>`;
+}
+
 function hero(place, big, unit, line1, line2) {
   return `<div class="wplace">${esc(place)}</div>
     <div class="wnum">${big}<span>${esc(unit)}</span></div>
@@ -178,7 +196,23 @@ export function renderInspector() {
   let spec = null, level = "none", chartTitle = "", chartRight = "", tip = "";
   A.innerHTML = ""; B.innerHTML = "";
 
-  if (s.mode === "band" && R.bandSummary) {
+  if (s.mode === "ship" && R.ship) {
+    const sh = R.ship, fc = s.shipForecast && sh.forecast.years.length;
+    const arctic = (via) => via.some((x) => x === "Northern Sea Route" || x === "Northwest Passage");
+    const counts = sh.years.map((_, y) => sh.lanes.filter((l) => arctic(l.via[y])).length);
+    const last = sh.years.length - 1, fy = sh.forecast.years.length - 1;
+    const nNow = fc ? sh.forecast.lanes.filter((l) => arctic(l.via[fy])).length : counts[last];
+    level = "significant";
+    tip = "Each line is the fastest sea path between two ports for one season, from MERRA-2 sea ice and 10 m wind. Blue lines are early years, yellow recent ones.";
+    heroEl.innerHTML = hero(fc ? `Predicted for ${sh.forecast.years[fy]}` : `Fastest sea routes, ${sh.years[last]}`, String(nNow), ` of ${sh.lanes.length}`,
+      "lanes take an Arctic shortcut", `${esc(monthsLabel(s.months))} · ${sh.inputs.wind ? "sea ice and 10 m wind" : "sea ice only (no surface wind file)"}`);
+    heroEl.insertAdjacentHTML("beforeend", `<button class="tb predict ${fc ? "on" : ""}" id="shipFc" title="Project the fastest routes for the next five years from the recent trend in sea ice and wind">${fc ? "Back to past routes" : "Predict next 5 years"}</button>`);
+    heroEl.querySelector("#shipFc").addEventListener("click", () => actions.set({ shipForecast: !s.shipForecast }));
+    A.innerHTML = card("ship", fc ? `Next 5 years (${sh.forecast.years[0]}–${sh.forecast.years[fy]})` : "Lanes", shipRows(sh, fc));
+    chartTitle = "Lanes using an Arctic route"; chartRight = esc(monthsLabel(s.months));
+    spec = { kind: "bars", years: sh.years, values: counts, max: sh.lanes.length, units: "lanes", fit: false, color: "#ffd60a", format: (v) => `${v} of ${sh.lanes.length}` };
+    B.innerHTML = card("list", "How the routes are found", `<div class="wcap">The ocean is a grid of cells about 200 km across. For each year, a computer search (A*) finds the path between two ports that takes the least sailing time at 14 knots. Head winds slow the ship (a 10 m/s head wind costs about 15%), sea ice slows it more, and water with over 50% ice is closed. Canals and narrow straits are opened by hand.<br><br><b>Prediction:</b> a straight-line trend through the last 20 years of sea ice and wind in every cell, extended five years, then the same search. It shows where the drift points, not next year's weather.</div>`);
+  } else if (s.mode === "band" && R.bandSummary) {
     const bs = R.bandSummary, km = bs.edgeShiftKmPerDecade;
     level = bs.level;
     tip = bs.sentence;

@@ -14,6 +14,16 @@
     "plain": "How fast the wind blows toward the north (positive) or south (negative) about 10 km up.",
     "why": "A wavier jet stream has stronger north-south winds, which can bring longer spells of hot or cold weather."
   },
+  "u10": {
+    "name": "East-west wind at 10 m",
+    "plain": "How fast the wind blows toward the east (positive) or west (negative) just above the sea surface, where it raises waves and slows ships.",
+    "why": "Surface winds follow the big pressure patterns, which can shift as the climate warms."
+  },
+  "v10": {
+    "name": "North-south wind at 10 m",
+    "plain": "How fast the wind blows toward the north (positive) or south (negative) just above the surface.",
+    "why": "Surface winds follow the big pressure patterns, which can shift as the climate warms."
+  },
   "velocity": {
     "name": "Climate velocity",
     "plain": "How fast, in kilometres per decade, a place would have to move to keep the same value: the trend divided by how quickly the value changes across the map.",

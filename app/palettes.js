@@ -54,6 +54,8 @@ export const VARS = {
   fzlev: { code: "FZLEV", ramp: "altitude", domain: [0, 5500], levels: 11, trend: "heat", short: "Freezing level", band: { min: 4000, max: null }, step: 50 },
   u250: { code: "U250", ramp: "uwind", domain: [-40, 40], levels: 16, trend: "heat", short: "East wind 250", band: { min: 20, max: null }, step: 1, hidden: true },
   v250: { code: "V250", ramp: "uwind", domain: [-25, 25], levels: 10, trend: "heat", short: "North wind 250", band: { min: 5, max: null }, step: 1, hidden: true },
+  u10: { code: "U10M", ramp: "uwind", domain: [-15, 15], levels: 12, trend: "heat", short: "East wind 10 m", band: { min: 5, max: null }, step: 0.5, hidden: true },
+  v10: { code: "V10M", ramp: "uwind", domain: [-10, 10], levels: 10, trend: "heat", short: "North wind 10 m", band: { min: 5, max: null }, step: 0.5, hidden: true },
 };
 
 export function varStyle(id) {

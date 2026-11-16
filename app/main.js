@@ -14,6 +14,7 @@ import { renderAbout } from "./ui/about.js";
 import { analogKm } from "./ui/inspector.js";
 
 export const MODES = [
+  { id: "ship", label: "Shipping routes", short: "SHIPPING" },
   { id: "series", label: "Time series", short: "SERIES" },
   { id: "map", label: "Trend map", short: "MAP" },
   { id: "band", label: "Shift: track a value", short: "SHIFT" },
@@ -29,8 +30,11 @@ export const MODES = [
 
 const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+// The site opens on the shipping-route product, in autumn (Sep-Nov), when
+// Arctic sea ice is lowest and the polar shortcuts can open.
+const SHIP_MONTHS = [9, 10, 11];
 const DEFAULTS = {
-  mode: "series", variable: "t2m", regionId: "global", custom: null, months: ALL_MONTHS,
+  mode: "ship", variable: "seaice", regionId: "global", custom: null, months: SHIP_MONTHS, shipForecast: false,
   band: { min: 10, max: null }, route: "nsr", overlayRoute: null, proj: "auto", cadence: "annual",
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
@@ -143,6 +147,32 @@ function ensureField(v) {
   setTime(t);
 }
 
+// Shipping routes: every lane's fastest path for every year as thin bands
+// (blue for 1980 through yellow for the latest year; years with the same path
+// share one line in the colour of the latest), the frame year on top in
+// white, and with the prediction on, the next five years dashed in magenta.
+const YEAR_RAMP = ["#2f6bff", "#22a7f0", "#2ec4b6", "#9bd83a", "#ffd60a"];
+function yearColor(f) {
+  const x = Math.max(0, Math.min(1, f)) * (YEAR_RAMP.length - 1), k = Math.min(YEAR_RAMP.length - 2, Math.floor(x)), t = x - k;
+  const a = YEAR_RAMP[k], b = YEAR_RAMP[k + 1], ch = (h, i) => parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16);
+  return `rgb(${[0, 1, 2].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t)).join(",")})`;
+}
+function shipOverlay(yr) {
+  const sh = app.R.ship, fc = app.state.shipForecast;
+  const routes = [], top = [], y0 = sh.years[0], span = Math.max(1, sh.years.at(-1) - y0);
+  const k = sh.years.indexOf(Math.floor(yr));
+  for (const lane of sh.lanes) {
+    const latest = new Map();
+    lane.paths.forEach((p, y) => { if (p) latest.set(JSON.stringify(p), y); });
+    [...latest.entries()].sort((a, b) => a[1] - b[1]).forEach(([, y]) => routes.push({ points: lane.paths[y], color: yearColor((sh.years[y] - y0) / span), width: 1.6, alpha: fc ? 0.35 : 0.85, halo: false }));
+    if (fc) sh.forecast.lanes.find((l) => l.id === lane.id)?.paths.forEach((p) => p && top.push({ points: p, color: "#ff2d95", width: 2.2, dash: [6, 4] }));
+    else if (k >= 0 && lane.paths[k]) top.push({ points: lane.paths[k], color: "#ffffff", width: 2 });
+  }
+  const ports = new Map();
+  for (const l of app.content.lanes) for (const p of [l.from, l.to]) ports.set(p.name, p);
+  return { routes: [...routes, ...top], ports: [...ports.values()], choke: null };
+}
+
 // The shortest open-water path for the frame's year (Sea-ice route), drawn in
 // yellow beside the fixed route; null when that year had none.
 function bestPathOverlay(yr) {
@@ -167,6 +197,10 @@ export function setTime(t) {
   if (app.R.track && app.map.overlay.track) {
     const yi = Math.round(Math.floor(yr) - app.R.track.years[0]);
     app.map.overlay.track.current = Math.max(0, Math.min(app.R.track.years.length - 1, yi));
+    app.map.requestRender();
+  }
+  if (app.state.mode === "ship" && app.R.ship) {
+    Object.assign(app.map.overlay, shipOverlay(yr));
     app.map.requestRender();
   }
   if (app.state.mode === "route" && app.R.bestPath) {
@@ -207,6 +241,8 @@ function autoProjection(s, region) {
 }
 
 function framingRegion(s, region) {
+  // Shipping routes: face Europe, the Middle East and the Arctic shortcuts.
+  if (s.mode === "ship" && app.map.kind === "globe") return { latMin: 5, latMax: 80, lonMin: -40, lonMax: 130 };
   if (s.mode === "compare") {
     const b = app.content.regions.find((r) => r.id === s.compareId);
     if (b && region.type !== "global") {
@@ -299,6 +335,12 @@ export async function update(changed = []) {
       R.routeVerdict = E.verdict(R.routeTrend, R.routeMK, "months");
       R.routeDetection = A ? A.detectionHorizon(ann) : null;
       R.bestPath = memo(`bp|${s.variable}|${route.id}|${mkey(s)}|${s.band.max}`, () => E.bestPath(v, route, { max: s.band.max ?? 0.15, months }));
+    }
+    if (s.mode === "ship") {
+      const ids = ["soilwet", "seaice", ...(hasVar("u10") && hasVar("v10") ? ["u10", "v10"] : [])];
+      const [soil, ice, u, w] = await ensureVars(ids);
+      if (my !== token) return;
+      R.ship = memo(`ship|${mkey(s)}`, () => E.shippingLanes({ soil, ice, u: u ?? null, v: w ?? null }, app.content.lanes, { months }));
     }
     if (s.mode === "flow" && A) {
       R.flow = memo(`vf|${s.variable}|${mkey(s)}`, () => A.velocityField(v, months));
@@ -580,6 +622,10 @@ export function applyScene() {
     ov.best = bestPathOverlay(frameYear(app.t));
     scene.iso = s.band.max ?? 0.15;
   }
+  if (s.mode === "ship" && R.ship) {
+    Object.assign(ov, shipOverlay(frameYear(app.t)));
+    scene.iso = 0.15;
+  }
   if (s.overlayRoute && s.mode !== "route") {
     const r = app.content.routes.find((x) => x.id === s.overlayRoute);
     if (r) ov.routes.push({ points: r.points, color: "#ffffff", dash: [7, 5] });
@@ -622,6 +668,8 @@ export const actions = {
   setMode(mode) {
     const s = app.state;
     const patch = { mode, prompt: null };
+    if (mode === "ship") Object.assign(patch, { variable: "seaice", regionId: "global", custom: null, months: SHIP_MONTHS });
+    else if (s.mode === "ship" && mode !== "route") Object.assign(patch, { variable: "t2m", months: ALL_MONTHS });
     if (mode === "route") Object.assign(patch, { variable: "seaice", regionId: "arctic", custom: null, months: [7, 8, 9, 10], band: { min: null, max: 0.15 }, route: s.route ?? "nsr" });
     if (mode === "band" && s.band.min == null && s.band.max == null) patch.band = varStyle(s.variable).band;
     if (mode === "twin") { if (!s.twin) patch.twin = defaultTwin(); patch.variable = "t2m"; }

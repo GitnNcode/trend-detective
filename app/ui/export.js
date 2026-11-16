@@ -58,6 +58,12 @@ function statsLine(app) {
     const b = R.bandSummary;
     return `Edge shift ${sg(b.edgeShiftKmPerDecade)} km/decade (poleward +), edge p ${pf(b.edgeP)}; area ${sg(b.areaPctPerDecade)} %/decade, p ${pf(b.areaP)}; ${b.kind}, ${lvl(b.level)}; n = ${R.track.years.length} years.`;
   }
+  if (s.mode === "ship" && R.ship) {
+    const sh = R.ship, y = sh.years.length - 1;
+    const arctic = (v) => v.includes("Northern Sea Route") || v.includes("Northwest Passage");
+    const n = sh.lanes.filter((l) => arctic(l.via[y])).length, f = sh.forecast.lanes.filter((l) => arctic(l.via.at(-1) ?? [])).length;
+    return `Fastest sea routes for ${sh.lanes.length} lanes, ${sh.years[0]}-${sh.years[y]}: ${n} use an Arctic route in ${sh.years[y]}${sh.forecast.years.length ? `, ${f} in the ${sh.forecast.years.at(-1)} projection` : ""} (MERRA-2 sea ice${sh.inputs.wind ? " and 10 m wind" : ""}).`;
+  }
   if (s.mode === "route" && R.routeVerdict) {
     const v = R.routeVerdict;
     return `Open-water months ${sg(v.perDecade)} per decade (95%: ${sg(v.ci95PerDecade[0])} to ${sg(v.ci95PerDecade[1])}); t-test p ${pf(v.pT)}; Mann–Kendall p ${pf(v.pMK)}; ${lvl(v.level)}; n = ${v.n}.${bestLine(R.bestPath)}`;

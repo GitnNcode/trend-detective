@@ -307,6 +307,50 @@
         "min": 5,
         "max": null
       }
+    },
+    {
+      "id": "u10",
+      "file": "u10.bin",
+      "source": "MERRA-2 M2TMNXSLV, U10M (eastward wind at 10 m)",
+      "units": "m/s",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.000543666,
+      "offset": 1.44886989,
+      "defaultBand": {
+        "min": 5,
+        "max": null
+      }
+    },
+    {
+      "id": "v10",
+      "file": "v10.bin",
+      "source": "MERRA-2 M2TMNXSLV, V10M (northward wind at 10 m)",
+      "units": "m/s",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.000491539,
+      "offset": 1.8550681860000002,
+      "defaultBand": {
+        "min": 5,
+        "max": null
+      }
     }
   ]
 }

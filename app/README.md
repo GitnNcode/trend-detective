@@ -24,6 +24,7 @@ Then visit http://localhost:8000/app/ (the root `index.html` redirects there). `
 
 | Product | What it shows |
 |---|---|
+| Shipping routes (opens first) | The fastest sea route between 11 pairs of big ports for every year since 1980, from sea ice and 10 m wind, drawn as year-coloured bands; a button projects the next five years from the recent trend |
 | Time series | Regional mean, trend, CI, significance; stripes and seasonal-cycle views |
 | Trend map | Per-cell trend, hatched where p ≥ 0.05; area census |
 | Shift | Fix a value, follow the zone that has it: IR-style enhancement on a gray field, previous edges, first-year edge, NHC-style track and cone, edge history (all years), arrived/left areas, edge km/decade |

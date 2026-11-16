@@ -1,0 +1,13 @@
+[
+  { "id": "gulf_rotterdam", "name": "Persian Gulf to Rotterdam", "cargo": "Crude oil", "from": { "name": "Ras Tanura", "lat": 26.7, "lon": 50.2 }, "to": { "name": "Rotterdam", "lat": 51.95, "lon": 4.0 } },
+  { "id": "gulf_ningbo", "name": "Persian Gulf to Ningbo", "cargo": "Crude oil", "from": { "name": "Ras Tanura", "lat": 26.7, "lon": 50.2 }, "to": { "name": "Ningbo", "lat": 29.9, "lon": 122.0 } },
+  { "id": "houston_rotterdam", "name": "Houston to Rotterdam", "cargo": "Crude oil and LNG", "from": { "name": "Houston", "lat": 29.3, "lon": -94.7 }, "to": { "name": "Rotterdam", "lat": 51.95, "lon": 4.0 } },
+  { "id": "houston_yokohama", "name": "Houston to Yokohama", "cargo": "LNG", "from": { "name": "Houston", "lat": 29.3, "lon": -94.7 }, "to": { "name": "Yokohama", "lat": 35.4, "lon": 139.7 } },
+  { "id": "sabetta_shanghai", "name": "Sabetta to Shanghai", "cargo": "Arctic LNG", "from": { "name": "Sabetta (Yamal)", "lat": 71.3, "lon": 72.1 }, "to": { "name": "Shanghai", "lat": 31.2, "lon": 121.9 } },
+  { "id": "shanghai_rotterdam", "name": "Shanghai to Rotterdam", "cargo": "Containers", "from": { "name": "Shanghai", "lat": 31.2, "lon": 121.9 }, "to": { "name": "Rotterdam", "lat": 51.95, "lon": 4.0 } },
+  { "id": "shanghai_la", "name": "Shanghai to Los Angeles", "cargo": "Containers", "from": { "name": "Shanghai", "lat": 31.2, "lon": 121.9 }, "to": { "name": "Los Angeles", "lat": 33.7, "lon": -118.3 } },
+  { "id": "rotterdam_ny", "name": "Rotterdam to New York", "cargo": "Containers", "from": { "name": "Rotterdam", "lat": 51.95, "lon": 4.0 }, "to": { "name": "New York", "lat": 40.5, "lon": -74.0 } },
+  { "id": "vancouver_rotterdam", "name": "Vancouver to Rotterdam", "cargo": "Grain", "from": { "name": "Vancouver", "lat": 49.3, "lon": -123.2 }, "to": { "name": "Rotterdam", "lat": 51.95, "lon": 4.0 } },
+  { "id": "santos_qingdao", "name": "Santos to Qingdao", "cargo": "Soybeans and iron ore", "from": { "name": "Santos", "lat": -24.0, "lon": -46.3 }, "to": { "name": "Qingdao", "lat": 36.0, "lon": 120.4 } },
+  { "id": "hedland_qingdao", "name": "Port Hedland to Qingdao", "cargo": "Iron ore", "from": { "name": "Port Hedland", "lat": -20.3, "lon": 118.6 }, "to": { "name": "Qingdao", "lat": 36.0, "lon": 120.4 } }
+]

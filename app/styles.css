@@ -239,3 +239,15 @@ input[type="range"].trange { width: 130px; accent-color: var(--accent); }
   .menubar .src { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+
+/* Shipping routes */
+.wship { display: grid; grid-template-columns: 1fr 52px 64px; grid-template-areas: "n d c" "v v v"; column-gap: 6px; font-size: 12.5px; padding: 4px 0; }
+.wship + .wship { border-top: 0.5px solid var(--sep); }
+.wship span { grid-area: n; font-weight: 600; }
+.wship b { grid-area: d; text-align: right; font-weight: 600; }
+.wship em { grid-area: c; text-align: right; font-style: normal; color: var(--label-2); }
+.wship em.dn { color: #34c759; }
+.wship em.up { color: #ff9500; }
+.wship i { grid-area: v; font-style: normal; font-size: 11px; color: var(--label-2); }
+.tb.predict { display: block; margin: 10px auto 0; padding: 0 16px; height: 30px; font-size: 13px; background: #ff2d95; color: #fff; border-color: #ff2d95; font-weight: 600; }
+.tb.predict.on { background: transparent; color: #ff2d95; }

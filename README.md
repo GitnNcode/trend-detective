@@ -8,6 +8,7 @@ Trend Detective is a free website that lets a student act as a data detective wi
 
 ## What it does
 
+- **Shipping routes** (the opening view): the fastest sea route between 11 pairs of big oil, gas, container and bulk ports, worked out for every year since 1980 from sea ice and 10 m wind and drawn on the globe as year-coloured bands. **Predict next 5 years** extends the recent trend in ice and wind and shows where the routes are heading.
 - **Time series** for any region: annual means since 1980, trend line, rate per decade with a 95% interval, t-test and Mann-Kendall verdict, a "years needed to detect" estimate, stripes and seasonal-cycle views.
 - **Trend map:** the trend in every grid cell, with non-significant cells hatched, so you can see where one variable rises in one place and falls in another.
 - **Shift:** fix a value (air at or above 10 °C, sea ice above 15%) and watch where on Earth it is found each year, and how fast that zone moves.
@@ -25,7 +26,7 @@ NASA MERRA-2 monthly means, January 1980 to the latest available month, from NAS
 
 | Collection | Fields used |
 |---|---|
-| M2TMNXSLV (single-level diagnostics) | 2 m air temperature, 500 hPa temperature and height, 250 hPa wind (U, V), total column water vapor |
+| M2TMNXSLV (single-level diagnostics) | 2 m air temperature, 500 hPa temperature and height, 250 hPa wind (U, V), 10 m wind (U, V), total column water vapor |
 | M2TMNXFLX (surface fluxes) | precipitation (PRECTOTCORR), evaporation, sea ice fraction (FRSEAICE) |
 | M2TMNXLND (land surface) | root-zone soil wetness, snow mass, runoff |
 | M2TMNXAER (aerosols) | total aerosol optical depth at 550 nm |

@@ -38,8 +38,8 @@ export function variableIds() {
 
 // Content from Lane 4, plus app-side extras (new modes and cases) appended.
 export async function loadContent() {
-  const [definitions, regions, usecases, routes, cases] = await Promise.all(
-    ["definitions", "regions", "usecases", "routes", "cases"].map((n) => json(CONTENT_BASE + n + ".json")),
+  const [definitions, regions, usecases, routes, cases, lanes] = await Promise.all(
+    ["definitions", "regions", "usecases", "routes", "cases", "lanes"].map((n) => json(CONTENT_BASE + n + ".json")),
   );
   const extra = async (n, fallback) => {
     try { return await json(EXTRA_BASE + n + ".json"); } catch { return fallback; }
@@ -53,6 +53,7 @@ export async function loadContent() {
     regions: [...regions, ...xRegions.filter((r) => !regionIds.has(r.id))],
     usecases: [...usecases.map((u) => ({ ...u, source: "lane4" })), ...xUse.map((u) => ({ ...u, source: "app", isNew: true }))],
     routes,
+    lanes,
     cases: [...cases, ...xCases.map((c) => ({ ...c, isNew: true }))],
     cities,
   };

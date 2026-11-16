@@ -714,13 +714,26 @@ export class MapView {
 
     for (const r of ov.best ? [...(ov.routes ?? []), ov.best] : ov.routes ?? []) {
       const geo = { type: "LineString", coordinates: r.points.map(([la, lo]) => [lo, la]) };
+      const w = r.width ?? 2;
+      if (r.halo !== false) { ctx.beginPath(); path(geo); ctx.strokeStyle = "#000"; ctx.lineWidth = w + 2; ctx.stroke(); }
       ctx.beginPath(); path(geo);
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.stroke();
-      ctx.beginPath(); path(geo);
-      ctx.strokeStyle = r.color ?? "#fff"; ctx.lineWidth = 2;
+      ctx.strokeStyle = r.color ?? "#fff"; ctx.lineWidth = w; ctx.globalAlpha = r.alpha ?? 1;
       if (r.dash) ctx.setLineDash(r.dash);
       ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    // Ports (Shipping routes): a dot and a name.
+    if (ov.ports) {
+      ctx.font = "600 10.5px -apple-system, system-ui, sans-serif";
+      ctx.textBaseline = "middle";
+      for (const pt of ov.ports) {
+        const xy = p([pt.lon, pt.lat]);
+        if (!xy) continue;
+        ctx.beginPath(); ctx.arc(xy[0], xy[1], 3.2, 0, 2 * Math.PI);
+        ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = "#000"; ctx.stroke();
+        ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.75)"; ctx.strokeText(pt.name, xy[0] + 6, xy[1]);
+        ctx.fillStyle = "#fff"; ctx.fillText(pt.name, xy[0] + 6, xy[1]);
+      }
     }
     if (ov.choke) {
       const xy = p([ov.choke[1], ov.choke[0]]);

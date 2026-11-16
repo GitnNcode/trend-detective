@@ -99,6 +99,23 @@ const routeById = new Map();
   }
 }
 
+// ---- shipping lanes ----
+{
+  const f = "lanes.json";
+  const lanes = load(f);
+  const port = (p) => p && isStr(p.name) && isNum(p.lat) && isNum(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180;
+  if (!Array.isArray(lanes)) err(f, "must be an array");
+  else {
+    const ids = new Set();
+    for (const l of lanes) {
+      if (!isStr(l.id) || !isStr(l.name) || !isStr(l.cargo)) err(f, "lane needs id, name and cargo");
+      if (ids.has(l.id)) err(f, `duplicate lane ${l.id}`);
+      ids.add(l.id);
+      if (!port(l.from) || !port(l.to)) err(f, `lane ${l.id}: from and to need name, lat, lon`);
+    }
+  }
+}
+
 // ---- shared action check (usecases rows and case-step actions) ----
 function checkAction(file, where, a) {
   if (!VARIABLE_IDS.includes(a.variable)) err(file, `${where}: unknown variable ${a.variable}`);

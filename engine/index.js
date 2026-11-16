@@ -26,6 +26,8 @@
 //   routeOpen(v, route, { max, greatCircle, months })
 //     -> { years, openMonths, openMonthList, samples: [[lat, lon]], chokePointIndex, chokePoint, months }
 //   sampleRoute(route, grid, { greatCircle }) -> [[lat, lon], ...]  the path routeOpen samples
+//   shippingLanes({ soil, ice, u, v }, lanes, { months, ahead })
+//     -> { years, lanes: [{ paths, km, days, via }], forecast: { years, lanes } }  fastest sea path per year, plus a projection
 //   bestPath(v, route, { max, months })
 //     -> { years, lengthKm, bestMonth, paths: ([[lat, lon]] | null)[], fixedKm }  shortest open-water path each year
 
@@ -34,6 +36,7 @@ export { deseasonalize, annualMeans, linearTrend, mannKendall, verdict } from ".
 export { trendMap } from "./fields.js";
 export { bandTrack, bandSummary } from "./band.js";
 export { routeOpen, bestPath } from "./route.js";
+export { shippingLanes, oceanMask, fastestPath, SHIP, GATES } from "./shipping.js";
 
 // Helpers that the interface may also want.
 export {

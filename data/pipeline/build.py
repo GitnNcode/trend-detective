@@ -28,6 +28,7 @@ SOURCE = {
     "soilwet": "GWETROOT", "snow": "SNOMAS", "runoff": "RUNOFF",
     "u250": "U250 (eastward wind)", "v250": "V250 (northward wind)", "aod": "TOTEXTTAU (total aerosol extinction AOT, 550 nm)",
     "fzlev": "0 °C level height from T2M, T500, H500 and surface height (PHIS)",
+    "u10": "U10M (eastward wind at 10 m)", "v10": "V10M (northward wind at 10 m)",
 }
 
 

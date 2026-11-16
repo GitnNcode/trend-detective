@@ -34,6 +34,7 @@ Earthdata credentials come from `~/.netrc` (`machine urs.earthdata.nasa.gov logi
   - `aod`: total aerosol optical depth at 550 nm (M2TMNXAER TOTEXTTAU), unitless, for the "city air" regions.
   - `fzlev`: height of the 0 °C level in metres above sea level. Per native cell and month, a straight-line temperature profile between the ground (T2M at the surface height PHIS/g) and 500 hPa (T500 at height H500) is solved for 0 °C; it is the ground height where T2M is already at or below 0 °C, and H500 where T500 is still above 0 °C. Then coarsened like every other field. It is an estimate (real profiles are not straight lines) and is best used for trends.
 - Fetch for these: `python fetch.py u250 v250 aod fzlev`, then `python build.py u250 v250 aod fzlev` (needs the Earthdata login and the GES DISC application approved).
+- `u10`, `v10` (added 2026-11-15): eastward and northward wind at 10 m (M2TMNXSLV U10M, V10M), for the shipping-route product. `python fetch.py u10 v10`, then `python build.py u10 v10`.
 - Known issue: `precip` (PRECTOTCORR) has a spike over southern Italy in 2026-02 (up to 134 mm/day on our grid, 415 at native resolution). It comes from NASA's recent, preliminary months and is left as delivered. `runoff` inherits it (up to 165 mm/day there), because MERRA-2's land model is driven by that precipitation. Use complete years up to 2025 for trends.
 
 ## First check against published numbers
