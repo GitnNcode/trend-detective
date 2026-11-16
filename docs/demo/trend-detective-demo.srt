@@ -1,0 +1,31 @@
+1
+00:00:00,200 --> 00:00:02,200
+This is Trend Detective.
+
+2
+00:00:02,200 --> 00:00:06,100
+Most tools pin a place and watch its numbers change.
+
+3
+00:00:06,100 --> 00:00:10,000
+We pin a number, 10 °C, and watch where it goes.
+
+4
+00:00:10,000 --> 00:00:14,600
+Europe's 10 °C zone has moved north about 114 km per decade.
+
+5
+00:00:14,600 --> 00:00:18,800
+Same variable, opposite trends: cleaner air over Europe, hazier over India.
+
+6
+00:00:18,800 --> 00:00:22,700
+Arrows show where each climate is heading, and how fast.
+
+7
+00:00:22,700 --> 00:00:26,900
+Every trend is tested, then checked against NASA and NSIDC records.
+
+8
+00:00:26,900 --> 00:00:29,000
+Try it free, in any browser.

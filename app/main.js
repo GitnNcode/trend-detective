@@ -676,7 +676,7 @@ async function boot() {
   app.S.subscribe((s, changed) => {
     document.getElementById("app").dataset.mode = s.mode;
     if (changed.length === 1 && changed[0] === "chartKind") W.renderInspector();
-    else update(changed);
+    else app.lastUpdate = update(changed);
   });
   renderAbout(app);
   app.cases = new CasePlayer(app);

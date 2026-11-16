@@ -142,7 +142,7 @@ export class MapView {
   setRamps({ rings, zone }) { if (rings) this.gl.setLUT("ringRamp", rings); if (zone) this.gl.setLUT("zoneRamp", zone); }
   setScene(scene) { this.scene = { ...scene }; this.requestRender(); }
   setOverlay(ov) { this.overlay = { ...ov }; this.baseDirty = true; this.requestRender(); }
-  setVectors(vec) { this.overlay = { ...this.overlay, vectors: vec }; this.baseDirty = true; this.requestRender(); }
+  setVectors(vec) { this.overlay = { ...this.overlay, vectors: vec }; this.requestRender(); }
   setOptions(o) { this.options = { ...this.options, ...o }; this.baseDirty = true; this.requestRender(); }
   setTime(t) { this.t = clamp(t, 0, Math.max(0, this.layers - 1)); this.requestRender(); }
   requestRender() { this.dirty = true; }
@@ -353,7 +353,6 @@ export class MapView {
       ctx.lineWidth = 1;
       ctx.stroke();
     }
-    if (this.overlay.vectors && !this.lowRes) this._drawVectors(ctx, p, f);
     ctx.restore();
     // Frame and labels
     ctx.strokeStyle = "#333";
@@ -484,6 +483,9 @@ export class MapView {
     ctx.clip();
     const path = d3.geoPath(p, ctx);
     const ov = this.overlay;
+
+    // Arrows change every frame, so they are drawn here, not in the cached base layer.
+    if (ov.vectors && !this.lowRes) this._drawVectors(ctx, p, f);
 
     // Region box (solid yellow, AWIPS-style highlight)
     const box = this.drawBox ?? ov.region;

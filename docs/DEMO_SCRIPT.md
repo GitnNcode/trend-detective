@@ -75,3 +75,27 @@ Computed with the engine on the MERRA-2 files in `/data`, exactly as the app sho
 | `arctic_lane` last step: Northwest Passage | +0.24 open months per decade, suggestive; first open month in 1993 |
 | Extra (app case "Climate on the move"): Europe, zone at least 10 °C annual mean | Edge moves poleward about 114 km per decade; area grows 7.8% per decade; significant |
 | Validation (slide 7) | Global warming +0.165 °C/decade (MERRA-2) vs +0.208 (GISTEMP), r = 0.97; September ice -11.7 vs -12.4 %/decade (NSIDC), r = 0.99 |
+
+
+## Recorded video (2026-11-15)
+
+`docs/demo/trend-detective-demo.mp4` is a 29-second, 1920x1080 screen recording of the live app with the captions below burned in. Record the voice-over by reading the captions at their times (`docs/demo/trend-detective-demo.srt` has the same lines with exact timings), then lay the audio under the video. Keep the final file at 30 seconds or less.
+
+| Time | On screen | Caption (read this) |
+|---|---|---|
+| 0:00.2-0:02.2 | Title card | This is Trend Detective. |
+| 0:02.2-0:06.1 | Shift, Europe: zone at or above 10 °C, loop starts | Most tools pin a place and watch its numbers change. |
+| 0:06.1-0:10.0 | The zone moves north year by year, earlier edges fade behind it | We pin a number, 10 °C, and watch where it goes. |
+| 0:10.0-0:14.6 | Display > Edge history: every year's edge at once | Europe's 10 °C zone has moved north about 114 km per decade. |
+| 0:14.6-0:18.8 | Procedures > haze question: Compare regions, Europe vs India | Same variable, opposite trends: cleaner air over Europe, hazier over India. |
+| 0:18.8-0:22.7 | Product > Vector loop: climate-velocity arrows in moving 15-year windows | Arrows show where each climate is heading, and how fast. |
+| 0:22.7-0:26.9 | Product > Validation: MERRA-2 vs GISTEMP and NSIDC | Every trend is tested, then checked against NASA and NSIDC records. |
+| 0:26.9-0:29.0 | End card with the site address | Try it free, in any browser. |
+
+To re-record (for example with the team name on the title card), serve the repository on port 8765 and run:
+
+```
+TEAM="Team name" MEMBERS="Name A · Name B · Name C · Name D" node app/dev/record-demo.mjs docs/demo/trend-detective-demo.mp4
+```
+
+The script drives the app frame by frame in headless Chromium (`app/dev/demo-director.js` holds the timeline and captions) and encodes with ffmpeg.
