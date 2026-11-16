@@ -34,7 +34,7 @@ export class CasePlayer {
     if (!first) return;
     this.el.hidden = false;
     this.el.innerHTML = `<div class="step">Welcome</div>
-      <div class="txt">Pick a product, field and region from the menu bar, or take the guided tour: <b>${esc(first.title)}</b>.</div>
+      <div class="txt">New here? Take the guided tour, <b>${esc(first.title)}</b>, or jump in: choose a field and a region from the menu bar and see whether it is really changing.</div>
       <div class="ctl"><button class="tb on" data-go>Start tour</button><button class="tb icon" data-x title="Close">✕</button></div>`;
     const done = () => { try { localStorage.setItem("td-hint", "1"); } catch { /* ignore */ } };
     this.el.querySelector("[data-go]").addEventListener("click", () => { done(); this.start(first.id); });

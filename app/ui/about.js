@@ -6,7 +6,7 @@ export function renderAbout(app) {
   el.innerHTML = `<div class="modal-card">
     <button class="tb x" data-x>Close</button>
     <h2>Trend Detective: methods and data</h2>
-    <p>Most trend tools fix a place and show its value changing. This tool also does the reverse: it fixes a value (air at or above 10 °C, wind above 40 m/s, sea ice above 15%) and follows where that value is found, year by year. A zone that moves makes values rise where it arrives and fall where it leaves, which is how one process can produce opposite trends in neighbouring regions.</p>
+    <p>Most trend tools pick a place and ask how its numbers changed. We wanted to ask the opposite question too: pick a value (air at 10 °C or warmer, wind above 40 m/s, sea ice above 15%) and ask where on Earth you find it each year. When that zone drifts, values go up where it arrives and down where it leaves. That is how a single cause can push two neighbouring regions in opposite directions.</p>
     <h3>Products</h3>
     <ul>
       <li><b>Time series:</b> area-weighted regional mean, yearly or seasonal, with an ordinary least-squares trend and its 95% confidence interval.</li>
@@ -20,13 +20,13 @@ export function renderAbout(app) {
     <h3>Significance</h3>
     <ul>
       <li>t-test on the least-squares slope, and a Mann–Kendall test with a lag-1 autocorrelation correction (Yue and Wang, 2004).</li>
-      <li><b>Significant:</b> both p &lt; 0.05. <b>Suggestive:</b> one of them, or both p &lt; 0.10. Otherwise not significant, which is a result, not an error.</li>
+      <li><b>Significant:</b> both p &lt; 0.05. <b>Suggestive:</b> one of them, or both p &lt; 0.10. Otherwise not significant. That is still an answer, not a failure: it means the change, if any, is hidden in the noise for now.</li>
       <li><b>Detection:</b> years of record needed to detect a trend of this size against this year-to-year noise (Weatherhead et al., 1998, J. Geophys. Res.), using the annual-mean form of the formula.</li>
     </ul>
     <h3>Data</h3>
     <ul>
       ${vars.map((v) => `<li><code>${v.id}</code>: ${v.source} (${v.units}), ${v.grid.dlat}° × ${v.grid.dlon}° grid, ${v.start} onward.</li>`).join("")}
-      <li>Global Modeling and Assimilation Office (GMAO) (2015), MERRA-2 monthly collections M2TMNXSLV, M2TMNXFLX, M2TMNXLND and M2C0NXASM, v5.12.4, GES DISC. Gelaro et al. (2017), J. Climate 30, 5419–5454.</li>
+      <li>Global Modeling and Assimilation Office (GMAO) (2015), MERRA-2 monthly collections M2TMNXSLV, M2TMNXFLX, M2TMNXLND, M2TMNXAER and M2C0NXASM, v5.12.4, GES DISC. Gelaro et al. (2017), J. Climate 30, 5419–5454.</li>
       <li>Coastlines and borders: Natural Earth via world-atlas.</li>
     </ul>
     <h3>Software</h3>
@@ -37,7 +37,7 @@ export function renderAbout(app) {
       <li>The record starts in 1980; recent months are preliminary, so trends use complete years.</li>
     </ul>
     <h3>AI use</h3>
-    <p>Code and text were written with Claude (Anthropic) and reviewed by the team. Nothing in the app calls an AI model; every number is computed from the data in the browser.</p>
+    <p>The idea and approach came from our team. We used Claude (Anthropic) to help write and review code and text, and we checked the results against NASA GISTEMP and the NSIDC Sea Ice Index. The app itself never calls an AI model: every number you see is worked out from NASA data, right in your browser.</p>
   </div>`;
   el.addEventListener("click", (e) => { if (e.target === el || e.target.closest("[data-x]")) el.hidden = true; });
 }
