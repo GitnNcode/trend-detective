@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.netrc
+data/mock/
+data/pipeline/
+docs/
+engine/test/
+engine/bench.js
+engine/realcheck.js
+app/dev/
+app/lib/*.test.mjs
+PLAN.md
