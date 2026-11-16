@@ -505,6 +505,21 @@ export class MapView {
       ctx.stroke();
     }
 
+    // Second region (Compare product), drawn in blue
+    if (ov.region2) {
+      const b2 = ov.region2;
+      ctx.beginPath();
+      if (b2.lonMax - b2.lonMin >= 359) {
+        const par = (lat) => d3.range(-180, 180.01, 2).map((lo) => [lo, lat]);
+        const lines = [];
+        if (b2.latMin > -89.5) lines.push(par(b2.latMin));
+        if (b2.latMax < 89.5) lines.push(par(b2.latMax));
+        path({ type: "MultiLineString", coordinates: lines });
+      } else path({ type: "LineString", coordinates: boxRing(b2) });
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 3.5; ctx.stroke();
+      ctx.strokeStyle = "#007aff"; ctx.lineWidth = 1.8; ctx.stroke();
+    }
+
     for (const r of ov.routes ?? []) {
       const geo = { type: "LineString", coordinates: r.points.map(([la, lo]) => [lo, la]) };
       ctx.beginPath(); path(geo);

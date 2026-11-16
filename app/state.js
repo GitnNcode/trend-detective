@@ -20,7 +20,7 @@ export function createStore(initial) {
 }
 
 // Keys that make a shareable link.
-const HASH_KEYS = ["mode", "variable", "regionId", "months", "band", "route", "proj", "cadence", "twin", "custom"];
+const HASH_KEYS = ["mode", "variable", "regionId", "months", "band", "route", "proj", "cadence", "twin", "custom", "compareId", "vecSource", "vecWindow"];
 
 export function toHash(s) {
   const q = new URLSearchParams();
@@ -52,7 +52,8 @@ export function fromHash(hash = location.hash) {
     } else if (k === "custom") {
       const [a, b, c, d] = v.split("~").map(Number);
       out.custom = { latMin: a, latMax: b, lonMin: c, lonMax: d };
-    } else out[k] = v;
+    } else if (k === "vecWindow") out[k] = Number(v) || 15;
+    else out[k] = v;
   }
   return out;
 }

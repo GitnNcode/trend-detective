@@ -21,6 +21,7 @@ export const MODES = [
   { id: "route", label: "Sea-ice route", short: "ROUTE" },
   { id: "lineup", label: "Field lineup", short: "LINEUP" },
   { id: "atlas", label: "Trend atlas", short: "ATLAS" },
+  { id: "compare", label: "Compare regions", short: "COMPARE" },
   { id: "vectors", label: "Vector loop", short: "VECTORS" },
   { id: "validate", label: "Validation", short: "CHECK" },
 ];
@@ -33,7 +34,7 @@ const DEFAULTS = {
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
   twin: null, prompt: null, cells: false, contours: true, coast: true, grid: true, hatch: true, showMonthly: false,
-  vecSource: "velocity", vecWindow: 15,
+  vecSource: "velocity", vecWindow: 15, compareId: "antarctic",
 };
 
 export const app = {
@@ -187,6 +188,7 @@ export function setPlaying(p) {
 // ---------- projection ----------
 function autoProjection(s, region) {
   if (s.proj !== "auto") return { kind: s.proj, south: region.latMax <= -50 };
+  if (s.mode === "compare") return { kind: "flat", south: false };
   if (s.variable === "seaice" || s.mode === "route") return { kind: "polar", south: false };
   if (region.latMin >= 55 && region.latMax - region.latMin < 50) return { kind: "polar", south: false };
   if (region.latMax <= -55) return { kind: "polar", south: true };
@@ -194,6 +196,15 @@ function autoProjection(s, region) {
 }
 
 function framingRegion(s, region) {
+  if (s.mode === "compare") {
+    const b = app.content.regions.find((r) => r.id === s.compareId);
+    if (b && region.type !== "global") {
+      const span = (r) => [r.lonMin, r.lonMax];
+      const lons = [...span(region), ...span(b)];
+      return { latMin: Math.min(region.latMin, b.latMin), latMax: Math.max(region.latMax, b.latMax), lonMin: Math.min(...lons), lonMax: Math.max(...lons) };
+    }
+    return { latMin: -90, latMax: 90, lonMin: -180, lonMax: 180 };
+  }
   if (s.mode === "twin") {
     const h = s.twin ?? defaultTwin();
     const dk = app.R?.twin?.thenNow?.distKm, r = Math.max(8, Math.min(22, ((Number.isFinite(dk) ? dk : 900) / 111) * 1.6));
@@ -215,11 +226,11 @@ export async function update(changed = []) {
     W.ensureChart();
     app.map.setOptions({ cells: s.cells, contours: s.contours, coast: s.coast, grid: s.grid });
 
-    if (changed.some((k) => ["regionId", "custom", "variable", "proj", "mode", "init", "twin"].includes(k))) {
+    if (changed.some((k) => ["regionId", "custom", "variable", "proj", "mode", "init", "twin", "compareId"].includes(k))) {
       const pk = autoProjection(s, region);
       const was = app.map.kind + app.map.polarSouth;
       app.map.setProjection(pk.kind, { south: pk.south });
-      if (changed.some((k) => ["regionId", "custom", "init", "twin", "mode"].includes(k)) || was !== pk.kind + pk.south) {
+      if (changed.some((k) => ["regionId", "custom", "init", "twin", "mode", "compareId"].includes(k)) || was !== pk.kind + pk.south) {
         app.map.fitRegion(framingRegion(s, region), { animate: !changed.includes("init") });
       }
     }
@@ -241,7 +252,16 @@ export async function update(changed = []) {
     R.verdict = E.verdict(R.trend, R.mk, units);
     R.empty = !annual.values.some(Number.isFinite);
     R.detection = A ? A.detectionHorizon(annual) : null;
-    if (["map", "band", "series", "lineup"].includes(s.mode)) R.tmap = memo(`tm|${s.variable}|${mkey(s)}`, () => E.trendMap(v, months));
+    if (s.mode === "compare") {
+      const rb = app.content.regions.find((r) => r.id === s.compareId) ?? app.content.regions.find((r) => r.id === "antarctic");
+      const rsB = memo(`rs|${vid}|${rkey(rb)}`, () => E.regionSeries(v, rb));
+      const dsB = memo(`ds|${vid}|${rkey(rb)}`, () => E.deseasonalize(rsB));
+      const annB = E.annualMeans(s.deseason && months.length < 12 ? dsB : rsB, months);
+      const tB = E.linearTrend(annB), mkB = E.mannKendall(annB);
+      R.regionB = rb;
+      R.cmp = { annual: annB, trend: tB, mk: mkB, verdict: E.verdict(tB, mkB, units), empty: !annB.values.some(Number.isFinite) };
+    }
+    if (["map", "band", "series", "lineup", "compare"].includes(s.mode)) R.tmap = memo(`tm|${s.variable}|${mkey(s)}`, () => E.trendMap(v, months));
 
     if (s.mode === "band") {
       const b = s.band;
@@ -504,6 +524,12 @@ export function applyScene() {
   };
 
   if (s.mode === "map" && s.layerView === "trend" && R.tmap) trendLayer(R.tmap, s.variable);
+  if (s.mode === "compare" && R.tmap) {
+    trendLayer(R.tmap, s.variable);
+    scene.region = null;
+    ov.region = region.type === "global" ? null : region;
+    ov.region2 = R.regionB;
+  }
   if (s.mode === "band") {
     const b = s.band;
     scene.gray = true;
@@ -581,6 +607,7 @@ export const actions = {
     if (mode === "map") patch.layerView = "trend";
     if (mode === "atlas") Object.assign(patch, { regionId: "global", custom: null });
     if (mode === "validate") Object.assign(patch, { regionId: "global", custom: null, months: ALL_MONTHS });
+    if (mode === "compare" && (s.compareId === s.regionId || !s.compareId)) patch.compareId = s.regionId === "antarctic" ? "arctic" : "antarctic";
     if (mode === "vectors") {
       if (s.vecSource === "wind" && hasVar("u250")) Object.assign(patch, { variable: "wind250" });
       else Object.assign(patch, { vecSource: "velocity", cadence: "annual", variable: s.variable === "seaice" ? "t2m" : s.variable });
@@ -609,6 +636,7 @@ export const actions = {
     if (a.band) patch.band = a.band; else if (patch.mode === "band") patch.band = varStyle(patch.variable).band;
     if (a.mode === "route") patch.route = a.route ?? "nsr";
     if (a.vecSource) patch.vecSource = a.vecSource;
+    if (a.compare) patch.compareId = a.compare;
     if (a.mode === "vectors" && a.vecSource === "wind") patch.variable = "wind250";
     if (a.twin) patch.twin = a.twin;
     patch.layerView = a.layerView ?? (patch.mode === "map" ? "trend" : app.state.layerView);
@@ -661,6 +689,9 @@ function bindKeys() {
     else if (e.key === "ArrowLeft") { setPlaying(false); setTime(Math.round(app.t) - 1); }
     else if (e.key === "Escape") { document.getElementById("aboutModal").hidden = true; app.map.drawMode = false; }
     else if (e.key === "b" || e.key === "B") { app.map.drawMode = true; W.toast("Drag a box on the map"); }
+    else if (e.key === "e" || e.key === "E") import("./ui/export.js").then((m) => m.exportPlot(app));
+    else if (e.key === "r" || e.key === "R") import("./ui/record.js").then((m) => m.recordLoop());
+    else if (e.key === "l" || e.key === "L") navigator.clipboard?.writeText(location.href).then(() => W.toast("Link copied"));
     else if (/^[0-9]$/.test(e.key)) { const m = MODES[(Number(e.key) + 9) % 10]; if (m) actions.setMode(m.id); }
   });
 }

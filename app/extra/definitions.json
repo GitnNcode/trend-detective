@@ -18,5 +18,10 @@
     "name": "Climate velocity",
     "plain": "How fast, in kilometres per decade, a place would have to move to keep the same value: the trend divided by how quickly the value changes across the map.",
     "why": "A small trend in a flat region (an ocean, a plain) moves the value a long way; the same trend on a steep mountainside barely moves it."
+  },
+  "fzlev": {
+    "name": "Freezing level height",
+    "plain": "How high above sea level you have to climb before the air is colder than 0 °C. Glaciers and snow can only last above it.",
+    "why": "When the air warms, the 0 °C level rises up mountainsides, so snow turns to rain and glaciers melt higher up."
   }
 }

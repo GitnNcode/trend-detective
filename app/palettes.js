@@ -18,6 +18,8 @@ export const RAMPS = {
   speed: ["#262626", "#4b2991", "#2a4fb0", "#1f8fd0", "#2fbfa0", "#7fd34e", "#d8e23a", "#f9a825", "#f4511e", "#c62828"],
   // Aerosol optical depth: clean (pale) to hazy (dark brown)
   aerosol: ["#f7f4e6", "#efe3ad", "#e8c662", "#dc9a33", "#bf6522", "#8e3a1a", "#561f12"],
+  // Height above sea level: low purple-blue to high yellow-white
+  altitude: ["#3b1f6b", "#2f4fa8", "#2d86c4", "#36b3a8", "#8acb6a", "#e6d75a", "#f3a945", "#fbe9c8"],
   // Signed wind component: easterly blue, westerly red
   uwind: ["#2c4f9e", "#4f7fcc", "#94b8e6", "#eef1f4", "#f2b98f", "#dc6f45", "#a8331c"],
   // ColorBrewer RdBu (reversed): falling blue, rising red
@@ -49,6 +51,7 @@ export const VARS = {
   snow: { code: "SNOMAS", ramp: "snow", domain: [0, 500], levels: 10, gamma: 0.5, trend: "ice", short: "Snow mass", band: { min: 10, max: null }, step: 1 },
   runoff: { code: "RUNOFF", ramp: "runoff", domain: [0, 6], levels: 12, gamma: 0.5, trend: "wet", short: "Runoff", band: { min: 1, max: null }, step: 0.1 },
   aod: { code: "AOD", ramp: "aerosol", domain: [0, 1], levels: 10, gamma: 0.6, trend: "heat", short: "Aerosol haze", band: { min: 0.3, max: null }, step: 0.01 },
+  fzlev: { code: "FZLEV", ramp: "altitude", domain: [0, 5500], levels: 11, trend: "heat", short: "Freezing level", band: { min: 4000, max: null }, step: 50 },
   u250: { code: "U250", ramp: "uwind", domain: [-40, 40], levels: 16, trend: "heat", short: "East wind 250", band: { min: 20, max: null }, step: 1, hidden: true },
   v250: { code: "V250", ramp: "uwind", domain: [-25, 25], levels: 10, trend: "heat", short: "North wind 250", band: { min: 5, max: null }, step: 1, hidden: true },
 };

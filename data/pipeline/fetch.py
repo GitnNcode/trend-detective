@@ -74,7 +74,9 @@ def main():
     for v in a.vars:
         need.setdefault(VARIABLES[v][0], set()).update(VARIABLES[v][1])
     if "seaice" in a.vars:
-        need[CONST[0]] = set(CONST[1])
+        need.setdefault(CONST[0], set()).add("FROCEAN")
+    if "fzlev" in a.vars:
+        need.setdefault(CONST[0], set()).add("PHIS")
 
     earthaccess.login()  # env vars, then ~/.netrc, then an interactive prompt
     session = earthaccess.get_requests_https_session()

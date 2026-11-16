@@ -7,6 +7,7 @@ import * as D from "../data.js";
 import { VARS, varStyle, trendRamp, stepColor, rampColor, RAMPS, zoneSoft } from "../palettes.js";
 import { app, actions, MODES, regionOf, monthsLabel, defOf, unitsOf, frameYear, setTime, setPlaying, seasonCode, hasVar } from "../main.js";
 import { exportPlot } from "./export.js";
+import { recordLoop } from "./record.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -38,6 +39,11 @@ export function renderMenubar() {
   const groups = new Map();
   for (const r of c.regions) { const t = r.type ?? "other"; if (!groups.has(t)) groups.set(t, []); groups.get(t).push(r); }
   const menus = [
+    { id: "file", label: "File", items: [
+      { label: "Export figure (PNG)", key: "E", act: () => exportPlot(app) },
+      { label: "Record loop as video", key: "R", act: () => recordLoop() },
+      { label: "Copy link to this view", key: "L", act: () => copyLink() },
+    ] },
     { id: "product", label: "Product", cur: mode.label, items: MODES.map((m, k) => ({ label: m.label, key: String(k + 1), mark: radio(s.mode === m.id), act: () => actions.setMode(m.id) })) },
     { id: "field", label: "Field", cur: code(s.variable), items: app.catalog.variables.filter((v) => !varStyle(v.id).hidden).map((v) => ({ label: `${code(v.id).padEnd(9, " ")} ${defOf(v.id).name}`, key: v.units, mark: radio(s.variable === v.id), title: defOf(v.id).plain, disabled: s.mode === "route" && v.id !== "seaice", act: () => actions.setVariable(v.id) })) },
     { id: "region", label: "Region", cur: s.custom ? "Box" : region.name, items: [...[...groups.entries()].flatMap(([t, rs]) => [{ hdr: t }, ...rs.map((r) => ({ label: r.name, mark: radio(!s.custom && s.regionId === r.id), act: () => actions.setRegion(r.id) }))]), { sep: true }, { label: "Draw box on map", key: "B", mark: radio(!!s.custom), act: () => startDraw() }] },
@@ -76,7 +82,7 @@ export function renderMenubar() {
       { sep: true }, { hdr: "Questions" },
       ...c.usecases.map((q) => ({ label: q.prompt, key: MODES.find((m) => m.id === q.mode)?.short ?? q.mode, mark: radio(s.prompt === q.prompt), act: () => actions.applyAction(q, q.prompt) })),
     ] },
-    { id: "help", label: "Help", items: [{ label: "Methods and data", act: () => { $("#aboutModal").hidden = false; } }, { label: "Keys: space play · ←/→ frame · 1–8 product", disabled: true }] },
+    { id: "help", label: "Help", items: [{ label: "Methods and data", act: () => { $("#aboutModal").hidden = false; } }, { label: "Keys: space play · ←/→ frame · 1–9, 0 product", disabled: true }, { label: "B box · E export · R record · L link", disabled: true }] },
   ];
   const bar = $("#menubar");
   bar.innerHTML = `<div class="appname"><svg viewBox="0 0 16 16"><path d="M1 11c3-4 5-4 7-2s4 2 7-2" stroke="#ffd400" stroke-width="1.6" fill="none"/><path d="M1 6c3-4 5-4 7-2s4 2 7-2" stroke="#7d838a" stroke-width="1.2" fill="none"/></svg>Trend Detective</div>
@@ -97,6 +103,10 @@ export function renderMenubar() {
   });
 }
 document.addEventListener("click", () => { if (openMenu) { openMenu = null; renderMenubar(); } });
+
+async function copyLink() {
+  try { await navigator.clipboard.writeText(location.href); toast("Link copied"); } catch { toast("Copy the address bar"); }
+}
 
 function startDraw() {
   app.map.drawMode = true;
@@ -128,6 +138,8 @@ export function renderToolbar() {
     prod = `<span class="tlabel">Location</span><input class="tinput" id="cityIn" list="cityList" style="width:150px;text-align:left" value="${esc(s.twin?.name ?? "")}" placeholder="City or click map"><datalist id="cityList">${(app.content.cities ?? []).map((c) => `<option value="${esc(c.name)}">${esc(c.country)}</option>`).join("")}</datalist>`;
   } else if (s.mode === "map") {
     prod = `<div class="tg"><button class="tb ${s.layerView === "trend" ? "on" : ""}" data-lv="trend">Trend</button><button class="tb ${s.layerView === "field" ? "on" : ""}" data-lv="field">Field</button></div>`;
+  } else if (s.mode === "compare") {
+    prod = `<span class="tlabel">vs</span><select class="tselect" id="cmpSel">${app.content.regions.filter((r) => r.type !== "global").map((r) => `<option value="${r.id}" ${r.id === s.compareId ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`;
   } else if (s.mode === "vectors") {
     const windOk = hasVar("u250") && hasVar("v250");
     prod = `<span class="tlabel">Arrows</span><div class="tg"><button class="tb ${s.vecSource !== "wind" ? "on" : ""}" data-vs="velocity">Climate velocity</button><button class="tb ${s.vecSource === "wind" ? "on" : ""}" data-vs="wind" ${windOk ? "" : 'disabled title="Needs the U250 and V250 fields from the data pipeline"'}>Wind 250 hPa</button></div>
@@ -149,10 +161,6 @@ export function renderToolbar() {
     <div class="tsep"></div>
     <div class="tg">${SEASONS.map(([n, m]) => `<button class="tb ${sameSet(m, s.months) ? "on" : ""}" data-season="${m.join(",")}">${n}</button>`).join("")}</div>
     ${prod ? `<div class="tsep"></div>${prod}` : ""}
-    <div class="tright">
-      <button class="tb ${app.map.drawMode ? "on" : ""}" id="boxBtn" title="Draw a region box (or Shift+drag)"><svg viewBox="0 0 12 12"><path d="M1.5 1.5h9v9h-9z" fill="none" stroke="currentColor" stroke-dasharray="2 1.5"/></svg>Box</button>
-      <button class="tb" id="pngBtn" title="Export the display as PNG">PNG</button>
-      <button class="tb" id="linkBtn" title="Copy a link to this display">Link</button>
     </div>`;
   tb.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => {
     const n = app.frames?.n ?? 1;
@@ -167,6 +175,7 @@ export function renderToolbar() {
   tb.querySelectorAll("[data-lv]").forEach((b) => b.addEventListener("click", () => actions.set({ layerView: b.dataset.lv })));
   tb.querySelectorAll("[data-vs]").forEach((b) => b.addEventListener("click", () => actions.set(b.dataset.vs === "wind" ? { vecSource: "wind", variable: "wind250" } : { vecSource: "velocity", variable: s.variable === "wind250" ? "t2m" : s.variable, cadence: "annual" })));
   $("#winSel", tb)?.addEventListener("change", (e) => actions.set({ vecWindow: Number(e.target.value) }));
+  $("#cmpSel", tb)?.addEventListener("change", (e) => actions.set({ compareId: e.target.value }));
   tb.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => {
     const bnd = s.band, cur = bnd.min ?? bnd.max ?? (vs.domain[0] + vs.domain[1]) / 2;
     if (b.dataset.w === "above") actions.setBand({ min: cur, max: null });
@@ -189,9 +198,7 @@ export function renderToolbar() {
     const c = (app.content.cities ?? []).find((x) => x.name.toLowerCase() === e.target.value.trim().toLowerCase());
     if (c) actions.set({ twin: { lat: c.lat, lon: c.lon, name: c.name } });
   });
-  $("#boxBtn", tb).addEventListener("click", () => { app.map.drawMode = !app.map.drawMode; renderToolbar(); if (app.map.drawMode) toast("Drag a box on the map"); });
-  $("#pngBtn", tb).addEventListener("click", () => exportPlot(app));
-  $("#linkBtn", tb).addEventListener("click", async () => { try { await navigator.clipboard.writeText(location.href); toast("Link copied"); } catch { toast("Copy the address bar"); } });
+
   updateFrame();
 }
 const round = (x, step) => Math.round(x / step) * step;
@@ -217,7 +224,7 @@ export function updateFrame() {
 function staticTime() {
   const s = app.state, f = app.frames;
   if (s.mode === "twin") return "1980s → 2016–25";
-  if (s.mode === "validate") return "1980–2025";
+  if (s.mode === "validate" || s.mode === "compare") return `${Math.floor(f.years[0])}–${Math.floor(f.years[f.n - 1])}`;
   if (s.mode === "vectors" && s.vecSource !== "wind" && app.R.vecLabel) return app.R.vecLabel;
   if ((s.mode === "map" && s.layerView === "trend") || s.mode === "flow" || s.mode === "atlas" || s.mode === "lineup") return `${Math.floor(f.years[0])}–${Math.floor(f.years[f.n - 1])}`;
   return null;
@@ -244,6 +251,7 @@ export function renderLegend() {
   else if (s.mode === "atlas") t = `All fields: linear trend per decade`;
   else if (s.mode === "vectors") t = s.vecSource === "wind" ? "Wind at 250 hPa (jet-stream level)" : `${def.name}: climate velocity, moving ${s.vecWindow}-year window`;
   else if (s.mode === "validate") t = "Validation: MERRA-2 against independent records";
+  else if (s.mode === "compare") t = `${def.name}: trend per decade, ${R.region.name} vs ${R.regionB?.name ?? ""}`;
   else t = def.name;
   el.innerHTML = `<div class="t">${esc(t)} <span>· ${esc(where)} · ${esc(seasonCode(s.months) === "ANN" ? "annual mean" : seasonCode(s.months) + " mean")}</span></div><div class="yr" id="legendYear"></div>`;
   updateFrame();

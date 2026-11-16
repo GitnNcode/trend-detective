@@ -62,18 +62,18 @@ export function ensureChart() {
 
 // ---------------------------------------------------------------- graphics
 // Range capsule (like a 10-day forecast row): track, colored 95% range, dot at the estimate.
-function capsule(lo, hi, est, { span, w = 252, colorLo = "#64d2ff", colorHi = "#ff9f0a" } = {}) {
+function capsule(lo, hi, est, { span, w = 252, colorLo = "#5ac8fa", colorHi = "#ff9500" } = {}) {
   const m = span ?? Math.max(Math.abs(lo), Math.abs(hi), Math.abs(est), 1e-9) * 1.25;
   const X = (v) => 6 + ((Math.max(-m, Math.min(m, v)) + m) / (2 * m)) * (w - 12);
   const fin = [lo, hi, est].every(Number.isFinite);
   const id = "g" + Math.random().toString(36).slice(2, 8);
   return `<svg class="capsule" viewBox="0 0 ${w} 26" preserveAspectRatio="none">
     <defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="${colorLo}"/><stop offset="1" stop-color="${colorHi}"/></linearGradient></defs>
-    <rect x="6" y="9" width="${w - 12}" height="6" rx="3" fill="rgba(255,255,255,0.22)"/>
+    <rect x="6" y="9" width="${w - 12}" height="6" rx="3" fill="#e5e5ea"/>
     ${fin ? `<rect x="${X(lo)}" y="9" width="${Math.max(6, X(hi) - X(lo))}" height="6" rx="3" fill="url(#${id})"/>` : ""}
-    <line x1="${X(0)}" y1="4" x2="${X(0)}" y2="20" stroke="rgba(255,255,255,0.55)" stroke-width="1"/>
-    ${fin ? `<circle cx="${X(est)}" cy="12" r="5" fill="#fff" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>` : ""}
-    <text x="${X(0)}" y="26" fill="rgba(255,255,255,0.6)" font-size="8" text-anchor="middle">0</text>
+    <line x1="${X(0)}" y1="4" x2="${X(0)}" y2="20" stroke="#aeaeb2" stroke-width="1"/>
+    ${fin ? `<circle cx="${X(est)}" cy="12" r="5" fill="#fff" stroke="rgba(0,0,0,0.28)" stroke-width="1" style="filter:drop-shadow(0 1px 1.5px rgba(0,0,0,0.25))"/>` : ""}
+    <text x="${X(0)}" y="26" fill="#8e8e93" font-size="8" text-anchor="middle">0</text>
   </svg>`;
 }
 
@@ -93,27 +93,27 @@ function dial(bearing, value, unit, { coherent = true } = {}) {
   const a = ((bearing ?? 0) - 90) * Math.PI / 180;
   const ticks = Array.from({ length: 36 }, (_, k) => {
     const r = (k * 10 - 90) * Math.PI / 180, long = k % 9 === 0;
-    return `<line x1="${60 + Math.cos(r) * (long ? 44 : 47)}" y1="${60 + Math.sin(r) * (long ? 44 : 47)}" x2="${60 + Math.cos(r) * 51}" y2="${60 + Math.sin(r) * 51}" stroke="rgba(255,255,255,${long ? 0.8 : 0.35})" stroke-width="${long ? 1.4 : 1}"/>`;
+    return `<line x1="${60 + Math.cos(r) * (long ? 44 : 47)}" y1="${60 + Math.sin(r) * (long ? 44 : 47)}" x2="${60 + Math.cos(r) * 51}" y2="${60 + Math.sin(r) * 51}" stroke="${long ? "#636366" : "#c7c7cc"}" stroke-width="${long ? 1.4 : 1}"/>`;
   }).join("");
   const tip = [60 + Math.cos(a) * 50, 60 + Math.sin(a) * 50], tail = [60 - Math.cos(a) * 50, 60 - Math.sin(a) * 50];
   return `<svg class="dial" viewBox="0 0 120 120">
     ${ticks}
-    <text x="60" y="22" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">N</text>
-    <text x="99" y="63" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.7)">E</text>
-    <text x="60" y="104" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.7)">S</text>
-    <text x="21" y="63" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.7)">W</text>
-    ${ok ? `<line x1="${tail[0]}" y1="${tail[1]}" x2="${tip[0]}" y2="${tip[1]}" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
-      <path d="M${tip[0]} ${tip[1]} L${tip[0] - Math.cos(a - 0.5) * 11} ${tip[1] - Math.sin(a - 0.5) * 11} L${tip[0] - Math.cos(a + 0.5) * 11} ${tip[1] - Math.sin(a + 0.5) * 11}Z" fill="#fff"/>
-      <circle cx="${tail[0]}" cy="${tail[1]}" r="3" fill="#fff"/>` : ""}
-    <circle cx="60" cy="60" r="23" fill="rgba(0,0,0,0.18)"/>
-    <text x="60" y="61" text-anchor="middle" font-size="15" fill="#fff" font-weight="600">${esc(value)}</text>
-    <text x="60" y="74" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,0.75)">${esc(unit)}</text></svg>`;
+    <text x="60" y="22" text-anchor="middle" font-size="9" fill="#1c1c1e" font-weight="600">N</text>
+    <text x="99" y="63" text-anchor="middle" font-size="9" fill="#8e8e93">E</text>
+    <text x="60" y="104" text-anchor="middle" font-size="9" fill="#8e8e93">S</text>
+    <text x="21" y="63" text-anchor="middle" font-size="9" fill="#8e8e93">W</text>
+    ${ok ? `<line x1="${tail[0]}" y1="${tail[1]}" x2="${tip[0]}" y2="${tip[1]}" stroke="#007aff" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M${tip[0]} ${tip[1]} L${tip[0] - Math.cos(a - 0.5) * 11} ${tip[1] - Math.sin(a - 0.5) * 11} L${tip[0] - Math.cos(a + 0.5) * 11} ${tip[1] - Math.sin(a + 0.5) * 11}Z" fill="#007aff"/>
+      <circle cx="${tail[0]}" cy="${tail[1]}" r="3" fill="#007aff"/>` : ""}
+    <circle cx="60" cy="60" r="23" fill="#f2f2f7"/>
+    <text x="60" y="61" text-anchor="middle" font-size="15" fill="#1c1c1e" font-weight="600">${esc(value)}</text>
+    <text x="60" y="74" text-anchor="middle" font-size="8.5" fill="#8e8e93">${esc(unit)}</text></svg>`;
 }
 
 function stackBar(parts) {
   let x = 6;
   const w = 240;
-  return `<svg class="capsule" viewBox="0 0 252 16" preserveAspectRatio="none"><rect x="6" y="5" width="${w}" height="6" rx="3" fill="rgba(255,255,255,0.18)"/>
+  return `<svg class="capsule" viewBox="0 0 252 16" preserveAspectRatio="none"><rect x="6" y="5" width="${w}" height="6" rx="3" fill="#e5e5ea"/>
     ${parts.map(([f, c]) => { const r = `<rect x="${x}" y="5" width="${Math.max(0, f * w)}" height="6" fill="${c}"/>`; x += f * w; return r; }).join("")}</svg>`;
 }
 
@@ -179,7 +179,7 @@ export function renderInspector() {
       + card("chart", "Open months", `<div class="wbig">${fmtNum(avg(ro.openMonths.slice(-10)), 2)}</div><div class="wcap">per year, last 10 years (was ${fmtNum(avg(ro.openMonths.slice(0, 10)), 2)})</div>`, { half: true })
       + pCards(vd.pT, vd.pMK, vd.n);
     chartTitle = "Open months per year"; chartRight = esc(monthsLabel(ro.months));
-    spec = { kind: "bars", years: ro.years, values: ro.openMonths, max: ro.months.length, units: "mo", fit: true, color: "#9fd0ff", format: (v) => `${v}/${ro.months.length} mo` };
+    spec = { kind: "bars", years: ro.years, values: ro.openMonths, max: ro.months.length, units: "mo", fit: true, color: "#5ac8fa", format: (v) => `${v}/${ro.months.length} mo` };
     B.innerHTML = detectionCard(R.routeDetection);
   } else if ((s.mode === "flow" || s.mode === "vectors") && (R.flowSummary || R.vecSummary)) {
     const fs = s.mode === "vectors" ? R.vecSummary : R.flowSummary;
@@ -224,6 +224,18 @@ export function renderInspector() {
     heroEl.innerHTML = hero("Whole Earth", "10", " fields", "Trend in every grid cell", `${seasonCode(s.months)} · 1980–2025`);
     A.innerHTML = card("grid", "Area with a significant trend", atlasRows(R.atlas));
     chartTitle = `${def.name}, global mean`; spec = seriesSpec(s, R);
+  } else if (s.mode === "compare" && R.cmp) {
+    const a = R.verdict, b = R.cmp.verdict;
+    const sa = Math.sign(a.perDecade), sb = Math.sign(b.perDecade);
+    const opposite = sa !== sb && sa !== 0 && sb !== 0;
+    const both = a.level !== "none" && b.level !== "none";
+    level = opposite && both ? (a.level === "significant" && b.level === "significant" ? "significant" : "suggestive") : "none";
+    heroEl.innerHTML = hero(`${R.region.name} vs ${R.regionB.name}`, opposite ? (both ? "Opposite" : "Opposite?") : "Same way", "", `${esc(def.name)}`, opposite && both ? "One variable, opposite trends in two places" : opposite ? "Opposite signs, but not both clear yet" : "Both change in the same direction");
+    const side = (name, vd, color) => card("trend", name, `<div class="wbig" style="color:${color}">${signed(vd.perDecade * factor, 2)}</div><div class="wcap">${esc(label)}/dec · ${statusWord(vd.level).toLowerCase()}</div>`, { half: true });
+    A.innerHTML = side(R.region.name, a, "#1c1c1e") + side(R.regionB.name, b, "#007aff")
+      + card("chart", "Both regions", dualPlot(R.annual, R.cmp.annual) + `<div class="wcap"><span style="color:#1c1c1e">■</span> ${esc(R.region.name)} &nbsp; <span style="color:#007aff">■</span> ${esc(R.regionB.name)} · yearly anomalies, dashed = trend</div>`);
+    spec = null;
+    B.innerHTML = "";
   } else if (s.mode === "validate" && R.validation) {
     const V = R.validation;
     level = "significant";
@@ -299,7 +311,7 @@ function dipoleCard(dp, factor, label) {
   const a = st.arrived.meanPerDecade * factor, l = st.left.meanPerDecade * factor;
   const m = Math.max(Math.abs(a) || 0, Math.abs(l) || 0, 1e-9) * 1.2;
   const row = (name, v, area, color) => `<div class="wlrow"><span>${name}</span>${area > 0 && Number.isFinite(v) ? capsule(Math.min(0, v), Math.max(0, v), v, { span: m, w: 150, colorLo: color, colorHi: color }) : `<span class="wcap">none</span>`}<b>${area > 0 && Number.isFinite(v) ? signed(v, 2) : ""}</b></div>`;
-  return card("arrows", "Where it arrived and left", row("Arrived", a, st.arrived.areaKm2, "#ff453a") + row("Left", l, st.left.areaKm2, "#64d2ff") + `<div class="wcap">${esc(label)} per decade, ${dp.early.join("–")} → ${dp.late.join("–")}</div>`);
+  return card("arrows", "Where it arrived and left", row("Arrived", a, st.arrived.areaKm2, "#ff3b30") + row("Left", l, st.left.areaKm2, "#5ac8fa") + `<div class="wcap">${esc(label)} per decade, ${dp.early.join("–")} → ${dp.late.join("–")}</div>`);
 }
 
 function census(tm, grid, region) {
@@ -317,7 +329,7 @@ function census(tm, grid, region) {
 
 function areaCard(R) {
   const cz = census(R.tmap, R.v.entry.grid, R.region);
-  return card("grid", "Area with a significant trend", `${stackBar([[cz.down, "#64d2ff"], [cz.flat, "rgba(255,255,255,0.28)"], [cz.up, "#ff9f0a"]])}
+  return card("grid", "Area with a significant trend", `${stackBar([[cz.down, "#5ac8fa"], [cz.flat, "#d1d1d6"], [cz.up, "#ff9500"]])}
     <div class="wtri"><span><b>${Math.round(cz.down * 100)}%</b> falling</span><span><b>${Math.round(cz.flat * 100)}%</b> unclear</span><span><b>${Math.round(cz.up * 100)}%</b> rising</span></div>`);
 }
 
@@ -326,7 +338,7 @@ function lineupRows(list) {
   const m = Math.max(...items.map((x) => Math.abs(x.tStat) || 0), 3) * 1.1;
   return items.map((x) => {
     const t = x.tStat || 0, { factor, label } = E.displayUnits(x.units);
-    const col = x.verdict.level === "significant" ? (t > 0 ? "#ff9f0a" : "#64d2ff") : x.verdict.level === "suggestive" ? "#ffd60a" : "rgba(255,255,255,0.45)";
+    const col = x.verdict.level === "significant" ? (t > 0 ? "#ff9500" : "#5ac8fa") : x.verdict.level === "suggestive" ? "#ffcc00" : "#c7c7cc";
     return `<div class="wlrow click" data-var="${x.id}"><span>${esc(varStyle(x.id).short)}</span>${capsule(Math.min(0, t), Math.max(0, t), t, { span: m, w: 120, colorLo: col, colorHi: col })}<b>${signed(x.verdict.perDecade * factor, 2)}</b></div>`;
   }).join("") + `<div class="wcap">bar: t statistic · value: change per decade</div>`;
 }
@@ -334,10 +346,35 @@ function lineupRows(list) {
 function atlasRows(items) {
   return items.map((it) => {
     const cz = census(it.tm, it.v.entry.grid, null);
-    return `<div class="wlrow"><span>${esc(varStyle(it.id).short)}</span>${stackBar([[cz.down, "#64d2ff"], [cz.flat, "rgba(255,255,255,0.22)"], [cz.up, "#ff9f0a"]])}<b>${Math.round((cz.up + cz.down) * 100)}%</b></div>`;
+    return `<div class="wlrow"><span>${esc(varStyle(it.id).short)}</span>${stackBar([[cz.down, "#5ac8fa"], [cz.flat, "#d1d1d6"], [cz.up, "#ff9500"]])}<b>${Math.round((cz.up + cz.down) * 100)}%</b></div>`;
   }).join("");
 }
 
 function valRows(rows, r) {
   return rows.map(([name, v, u]) => `<div class="wkv"><span>${esc(name)}</span><b>${signed(v, 3)} ${esc(u)}</b></div>`).join("") + `<div class="wcap">correlation of yearly values r = ${fmtNum(r, 2)}</div>`;
+}
+
+// Two regions' yearly anomalies on one small plot (for Compare).
+function dualPlot(a, b) {
+  const W = 268, H = 120, L = 30, R = W - 6, T = 6, B = H - 16;
+  const anom = (an) => { const v = Array.from(an.values); const f = v.filter(Number.isFinite); const m = f.reduce((x, y) => x + y, 0) / Math.max(1, f.length); return v.map((x) => x - m); };
+  const ya = anom(a), yb = anom(b), years = a.years;
+  const all = [...ya, ...yb].filter(Number.isFinite);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = (hi - lo) * 0.1 || 1; lo -= pad; hi += pad;
+  const X = (y) => L + ((y - years[0]) / Math.max(1, years.at(-1) - years[0])) * (R - L);
+  const Y = (v) => B - ((v - lo) / (hi - lo)) * (B - T);
+  const line = (vals, ys) => vals.map((v, k) => (Number.isFinite(v) ? `${X(ys[k]).toFixed(1)},${Y(v).toFixed(1)}` : null)).filter(Boolean).join(" ");
+  const fit = (vals, ys) => { const t = E.linearTrend({ years: ys, values: Float64Array.from(vals) }); return [ys[0], ys.at(-1)].map((y) => `${X(y).toFixed(1)},${Y(t.intercept + t.slope * y).toFixed(1)}`).join(" "); };
+  const ticks = [lo + (hi - lo) * 0.15, (lo + hi) / 2, hi - (hi - lo) * 0.15];
+  return `<svg class="capsule" viewBox="0 0 ${W} ${H}" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+    <rect x="${L}" y="${T}" width="${R - L}" height="${B - T}" fill="none" stroke="#d1d1d6"/>
+    <line x1="${L}" y1="${Y(0)}" x2="${R}" y2="${Y(0)}" stroke="#d1d1d6" stroke-dasharray="2 2"/>
+    ${ticks.map((v) => `<text x="${L - 4}" y="${Y(v) + 3}" font-size="8.5" fill="#8e8e93" text-anchor="end">${fmtNum(v, 2)}</text>`).join("")}
+    ${[1980, 2000, 2020].filter((y) => y >= years[0] && y <= years.at(-1)).map((y) => `<text x="${X(y)}" y="${H - 4}" font-size="8.5" fill="#8e8e93" text-anchor="middle">${y}</text>`).join("")}
+    <polyline points="${line(yb, b.years)}" fill="none" stroke="#007aff" stroke-width="1.3"/>
+    <polyline points="${line(ya, years)}" fill="none" stroke="#1c1c1e" stroke-width="1.3"/>
+    <polyline points="${fit(yb, b.years)}" fill="none" stroke="#007aff" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <polyline points="${fit(ya, years)}" fill="none" stroke="#1c1c1e" stroke-width="1.4" stroke-dasharray="4 3"/>
+  </svg>`;
 }

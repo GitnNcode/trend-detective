@@ -450,5 +450,163 @@
       12
     ],
     "mode": "validate"
+  },
+  {
+    "prompt": "Are the two poles warming the same way?",
+    "variable": "t2m",
+    "region": "arctic",
+    "compare": "antarctic",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "compare"
+  },
+  {
+    "prompt": "Is evaporation falling over the Amazon but rising over the Atlantic?",
+    "variable": "evap",
+    "region": "amazon",
+    "compare": "natlantic",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "compare"
+  },
+  {
+    "prompt": "Is the Amazon drying while the Sahel gets wetter?",
+    "variable": "precip",
+    "region": "amazon",
+    "compare": "sahel",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "compare"
+  },
+  {
+    "prompt": "Is the freezing level climbing the Andes?",
+    "variable": "fzlev",
+    "region": "andes",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "series"
+  },
+  {
+    "prompt": "Is the snow line rising in the Himalaya in summer?",
+    "variable": "fzlev",
+    "region": "himalaya",
+    "months": [
+      6,
+      7,
+      8
+    ],
+    "mode": "series"
+  },
+  {
+    "prompt": "Is the freezing level rising over the Alps?",
+    "variable": "fzlev",
+    "region": "alps",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "series"
+  },
+  {
+    "prompt": "Where is the freezing level rising fastest?",
+    "variable": "fzlev",
+    "region": "global",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "map"
+  },
+  {
+    "prompt": "Is the zone with a freezing level above 4 km spreading?",
+    "variable": "fzlev",
+    "region": "tropics60",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "band",
+    "band": {
+      "min": 4000,
+      "max": null
+    }
   }
 ]

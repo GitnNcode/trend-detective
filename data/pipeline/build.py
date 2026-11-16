@@ -27,6 +27,7 @@ SOURCE = {
     "tqv": "TQV", "precip": "PRECTOTCORR", "evap": "EVAP", "seaice": "FRSEAICE / FROCEAN, land masked",
     "soilwet": "GWETROOT", "snow": "SNOMAS", "runoff": "RUNOFF",
     "u250": "U250 (eastward wind)", "v250": "V250 (northward wind)", "aod": "TOTEXTTAU (total aerosol extinction AOT, 550 nm)",
+    "fzlev": "0 °C level height from T2M, T500, H500 and surface height (PHIS)",
 }
 
 
@@ -81,14 +82,19 @@ class Coarsener:
         return out.reshape(self.shape)
 
 
-def ocean_fraction(raw):
-    """FROCEAN on the native grid, or None if not fetched."""
-    sn, (field,) = CONST
+def const_field(raw, field):
+    """A constant (time-invariant) M2C0NXASM field on the native grid, or None."""
+    sn = CONST[0]
     files = sorted((raw / sn / field).glob("*.nc4")) if (raw / sn / field).exists() else []
     return read_field(raw, sn, field, files[0].stem)[2] if files else None
 
 
-def derive(vid, f, frocean, tile_fraction):
+def ocean_fraction(raw):
+    """FROCEAN on the native grid, or None if not fetched."""
+    return const_field(raw, "FROCEAN")
+
+
+def derive(vid, f, frocean, tile_fraction, zsfc=None):
     if vid in ("t2m", "t500"):
         return f[0] - 273.15
     if vid == "wind250":
@@ -98,6 +104,16 @@ def derive(vid, f, frocean, tile_fraction):
     if vid == "seaice":
         ice = f[0] if tile_fraction else f[0] / np.maximum(frocean, 1e-6)
         return np.where(frocean >= 0.5, np.clip(ice, 0, 1), np.nan)
+    if vid == "fzlev":
+        # Linear temperature profile between the surface (T2M at the ground) and
+        # 500 hPa (T500 at height H500): where does it cross 0 °C?
+        t2, t5, h5 = f[0] - 273.15, f[1] - 273.15, f[2]
+        span = t2 - t5
+        frac = np.clip(t2 / np.where(span > 0.05, span, np.nan), 0.0, 1.0)
+        z = zsfc + (h5 - zsfc) * frac
+        z = np.where(t2 <= 0, zsfc, z)  # already freezing at the ground
+        z = np.where(t5 >= 0, h5, z)    # still above 0 °C at 500 hPa (rare): cap at H500
+        return z
     return f[0]
 
 
@@ -130,12 +146,19 @@ def build(vid, raw, out):
         tile_fraction = bool(np.any(f0[coastal] > frocean[coastal] + 0.01))
         print(f"  seaice: FRSEAICE is per {'ocean tile' if tile_fraction else 'grid box'}")
 
+    zsfc = None
+    if vid == "fzlev":
+        phis = const_field(raw, "PHIS")
+        if phis is None:
+            sys.exit("fzlev needs PHIS: run fetch.py fzlev")
+        zsfc = phis / 9.80665
+
     la, lo, _ = read_field(raw, sn, fields[0], run[0])
     coarsen = Coarsener(la, lo, grid)
     vals = np.empty((len(run), grid["nlat"], grid["nlon"]))
     for t, k in enumerate(run):
         f = [read_field(raw, sn, fl, k)[2] for fl in fields]
-        vals[t] = coarsen(derive(vid, f, frocean, tile_fraction))
+        vals[t] = coarsen(derive(vid, f, frocean, tile_fraction, zsfc))
     entry = write_var(out, vid, vals, grid, units,
                       f"MERRA-2 {sn}, {SOURCE[vid]}", band)
     print(f"built {vid}: {len(run)} months {run[0]}..{run[-1]}")

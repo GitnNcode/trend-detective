@@ -106,5 +106,41 @@
     "latMax": 32,
     "lonMin": 72,
     "lonMax": 90
+  },
+  {
+    "id": "andes",
+    "name": "Tropical Andes",
+    "type": "mountains",
+    "latMin": -20,
+    "latMax": 5,
+    "lonMin": -80,
+    "lonMax": -65
+  },
+  {
+    "id": "himalaya",
+    "name": "Himalaya and Tibetan Plateau",
+    "type": "mountains",
+    "latMin": 26,
+    "latMax": 36,
+    "lonMin": 75,
+    "lonMax": 95
+  },
+  {
+    "id": "alps",
+    "name": "European Alps",
+    "type": "mountains",
+    "latMin": 43,
+    "latMax": 48,
+    "lonMin": 5,
+    "lonMax": 16
+  },
+  {
+    "id": "rockies",
+    "name": "Rocky Mountains",
+    "type": "mountains",
+    "latMin": 35,
+    "latMax": 55,
+    "lonMin": -125,
+    "lonMax": -105
   }
 ]
