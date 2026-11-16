@@ -68,7 +68,12 @@ Then open http://localhost:8000/app/. Tests: `cd engine && npm test` and `node a
 
 ## Team
 
-`[TEAM: add names and roles]`
+| Name | Role |
+|---|---|
+| Aditya Mishra | Developer, ideator, visual designer |
+| David Chen | Developer, data analysis |
+| Sricharan Vagvala | Developer, ideator, data analysis |
+| Daniel Garcia | Developer, visual designer |
 
 ## Use of AI
 
