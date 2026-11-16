@@ -22,6 +22,11 @@ export function fmtNum(x, sig = 3) {
   return E.fmt(x, sig);
 }
 export const signed = (x, sig = 2) => (Number.isFinite(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + fmtNum(Math.abs(x), sig) : "–");
+// Round a rough axis step to 1, 2, 2.5 or 5 times a power of ten.
+export function niceStep(x) {
+  const p = Math.pow(10, Math.floor(Math.log10(x))), m = x / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+}
 const pTxt = (p) => (!Number.isFinite(p) ? "–" : p < 0.001 ? "<.001" : p.toFixed(3).replace(/^0/, ""));
 const dispUnits = (id) => E.displayUnits(unitsOf(id));
 // Units for absolute values (fractions shown as %); dispUnits is for rates.

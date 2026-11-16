@@ -6,7 +6,7 @@ import * as d3 from "d3";
 import * as E from "../../engine/index.js";
 import { actions, defOf, unitsOf, seasonCode } from "../main.js";
 import { varStyle, rampLUT, trendRamp } from "../palettes.js";
-import { fmtNum, signed } from "./workstation.js";
+import { fmtNum, signed, niceStep } from "./workstation.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const FONT = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
@@ -188,15 +188,23 @@ function validation(app, el) {
     </div>
     <p class="sheet-note">MERRA-2 is a reanalysis; GISTEMP is built from station and ship thermometers, and the Sea Ice Index from passive-microwave satellites. Lines are yearly values (September for sea ice); dashed lines are least-squares trends. MERRA-2 extent counts grid cells with at least 15% ice on a 1° grid north of 50°N.</p>`;
   requestAnimationFrame(() => {
-    pairPlot(el.querySelector('[data-v="t"]'), V.t2m.years, V.t2m.oursAnom, V.t2m.refAnom, "#d62728");
-    pairPlot(el.querySelector('[data-v="i"]'), V.ice.years, V.ice.ours, V.ice.ref, "#1f77b4");
+    const draw = (extra) => {
+      pairPlot(el.querySelector('[data-v="t"]'), V.t2m.years, V.t2m.oursAnom, V.t2m.refAnom, "#d62728", extra);
+      pairPlot(el.querySelector('[data-v="i"]'), V.ice.years, V.ice.ours, V.ice.ref, "#1f77b4", extra);
+    };
+    draw(0);
+    // On tall screens, let the plots grow into the free space below the note.
+    const note = el.querySelector(".sheet-note");
+    const spare = note ? el.clientHeight - 16 - (note.offsetTop + note.offsetHeight) : 0;
+    if (spare > 24) draw(spare);
   });
 }
 
-function pairPlot(cv, years, a, b, colorB) {
+function pairPlot(cv, years, a, b, colorB, extra = 0) {
   if (!cv) return;
   const dpr = Math.min(2, devicePixelRatio || 1);
-  const W = cv.clientWidth || 400, H = Math.max(220, Math.round(W * 0.55));
+  const W = cv.clientWidth || 400, base = Math.max(220, Math.round(W * 0.55));
+  const H = Math.round(Math.min(base + extra, Math.max(base, W * 0.75)));
   cv.style.height = H + "px";
   cv.width = W * dpr; cv.height = H * dpr;
   const ctx = cv.getContext("2d");
@@ -231,9 +239,4 @@ function pairPlot(cv, years, a, b, colorB) {
   line(a, "#111"); line(b, colorB);
   line(fit(a), "#111", true); line(fit(b), colorB, true);
   ctx.strokeStyle = "#333"; ctx.lineWidth = 1; ctx.strokeRect(L + 0.5, T + 0.5, R - L - 1, B - T);
-}
-
-function niceStep(x) {
-  const p = Math.pow(10, Math.floor(Math.log10(x))), m = x / p;
-  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
 }

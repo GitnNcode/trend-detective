@@ -9,7 +9,7 @@ import * as E from "../../engine/index.js";
 import * as D from "../data.js";
 import { varStyle } from "../palettes.js";
 import { app, actions, defOf, unitsOf, frameYear, setTime, setPlaying, seasonCode, monthsLabel } from "../main.js";
-import { fmtNum, signed, absUnits, nearestCityName } from "./workstation.js";
+import { fmtNum, signed, absUnits, nearestCityName, niceStep } from "./workstation.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -132,9 +132,10 @@ function detectionCard(det) {
   const big = done ? (det.etaYear ?? "now") : det.status === "never" ? "—" : `~${det.etaYear}`;
   const word = done ? "Detectable" : det.status === "never" ? "Not this century" : "Not yet";
   const frac = Number.isFinite(det.nStar) ? det.nYears / det.nStar : 0;
+  const need = Number.isFinite(det.nStar) && det.nStar < 999 ? Math.round(det.nStar) : null;
   return card("clock", "Detection", `<div class="wrow"><div class="wbig">${big}</div><div class="wword">${word}</div></div>
     ${gaugeBar(Math.min(1, frac), { stops: ["#ff453a", "#ff9f0a", "#ffd60a", "#34c759"] })}
-    <div class="wcap">${Math.round(det.nYears)} of ${Number.isFinite(det.nStar) && det.nStar < 999 ? Math.round(det.nStar) : "∞"} years needed to detect a trend this size</div>`);
+    <div class="wcap">${Math.round(det.nYears)} years of data · ${need ? `${need} needed for a trend this size` : "trend too small to detect"}</div>`);
 }
 
 function hero(place, big, unit, line1, line2) {
@@ -372,7 +373,8 @@ function dualPlot(a, b) {
   const Y = (v) => B - ((v - lo) / (hi - lo)) * (B - T);
   const line = (vals, ys) => vals.map((v, k) => (Number.isFinite(v) ? `${X(ys[k]).toFixed(1)},${Y(v).toFixed(1)}` : null)).filter(Boolean).join(" ");
   const fit = (vals, ys) => { const t = E.linearTrend({ years: ys, values: Float64Array.from(vals) }); return [ys[0], ys.at(-1)].map((y) => `${X(y).toFixed(1)},${Y(t.intercept + t.slope * y).toFixed(1)}`).join(" "); };
-  const ticks = [lo + (hi - lo) * 0.15, (lo + hi) / 2, hi - (hi - lo) * 0.15];
+  const step = niceStep((hi - lo) / 3), ticks = [];
+  for (let k = Math.ceil(lo / step); k * step <= hi; k++) ticks.push(k * step);
   return `<svg class="capsule" viewBox="0 0 ${W} ${H}" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
     <rect x="${L}" y="${T}" width="${R - L}" height="${B - T}" fill="none" stroke="#d1d1d6"/>
     <line x1="${L}" y1="${Y(0)}" x2="${R}" y2="${Y(0)}" stroke="#d1d1d6" stroke-dasharray="2 2"/>
