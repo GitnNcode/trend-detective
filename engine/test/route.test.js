@@ -59,3 +59,34 @@ test("a route with no data never counts as open", () => {
   assert.deepEqual(r.openMonths, [0, 0]);
   assert.equal(r.chokePointIndex, -1);
 });
+
+test("bestPath finds the shortest open-water path each year and shortens it when ice retreats", async () => {
+  const { bestPath } = await import("../index.js");
+  // September only. Before 1990 nothing is open. 1990-1999 only the 72N row
+  // is open. From 2000 everything north of 72N is open, so the path can bend
+  // poleward like a great circle and gets shorter. Land (missing) at 73N
+  // 90E never blocks.
+  const v = synthVar({ grid: ARCTIC, scale: 0.0001, units: "0 to 1", start: "1980-01", nt: 40 * 12 },
+    ({ lat, lon, year, month }) => {
+      if (lat === 73 && Math.abs(lon - 90) < 0.1) return NaN;
+      if (month !== 9 || year < 1990) return 0.9;
+      if (lat === 72 && lon >= 15 && lon <= 161) return 0.05;
+      if (year >= 2000 && lat >= 72) return 0.05;
+      return 0.9;
+    });
+  const r = bestPath(v, { points: [[72, 17.5], [72, 160]] }, { max: 0.15, months: [9] });
+  const at = (y) => r.years.indexOf(y);
+  assert.ok(Number.isNaN(r.lengthKm[at(1985)]));
+  assert.equal(r.paths[at(1985)], null);
+
+  const row = r.lengthKm[at(1995)];
+  const rowKm = (160 - 17.5) / 1.25 * 2 * 6371.0088 * Math.asin(Math.cos(72 * Math.PI / 180) * Math.sin(0.625 * Math.PI / 180));
+  assert.ok(Math.abs(row - rowKm) / rowKm < 0.01, `row path ${row} vs ${rowKm}`);
+  assert.ok(r.paths[at(1995)].every(([lat]) => lat === 72));
+  assert.equal(r.bestMonth[at(1995)], 9);
+
+  const late = r.lengthKm[at(2005)];
+  assert.ok(late < 0.95 * row, `open Arctic path ${late} should beat the row ${row}`);
+  assert.ok(Math.max(...r.paths[at(2005)].map(([lat]) => lat)) > 74);
+  assert.ok(r.fixedKm > 0);
+});

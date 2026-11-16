@@ -29,7 +29,7 @@ Then visit http://localhost:8000/app/ (the root `index.html` redirects there). `
 | Shift | Fix a value, follow the zone that has it: IR-style enhancement on a gray field, previous edges, first-year edge, NHC-style track and cone, edge history (all years), arrived/left areas, edge km/decade |
 | Climate velocity | Trend ÷ spatial gradient (km/decade) with direction vectors |
 | Climate analog | Where a place's 1980s climate is now, and where today's climate was in the 1980s |
-| Sea-ice route | Open-water months per year along the Northern Sea Route or Northwest Passage, with the choke point |
+| Sea-ice route | Open-water months per year along the Northern Sea Route or Northwest Passage, with the choke point, plus the shortest open-water path between its ends each year (yellow line) |
 | Field lineup | All ten fields tested for one region, ranked by evidence |
 | Trend atlas | Per-field trend maps on one display |
 | Compare regions | The same variable in two places: opposite-trend verdict, both outlined on the trend map |

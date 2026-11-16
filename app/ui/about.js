@@ -15,6 +15,7 @@ export function renderAbout(app) {
       <li><b>Climate velocity:</b> the local trend divided by the spatial gradient of the long-term mean, in km per decade (Loarie et al., 2009, Nature 462).</li>
       <li><b>Climate analog:</b> each land cell gets a fingerprint for 1980–1989 and 2016–2025 (mean temperature, warmest minus coldest month, log precipitation). The best match within 2,500 km is located for both directions.</li>
       <li><b>Sea-ice route:</b> a month is open when every point along the route has at most the chosen ice fraction.</li>
+      <li><b>Best open path:</b> each year, the shortest path between the route's two ends through grid cells at or below the chosen ice fraction (Dijkstra on the 1° by 1.25° grid, eight neighbours, great-circle steps), in whichever checked month it is shortest. Lengths are rough, about ±5%, and straits narrower than a cell can close.</li>
       <li><b>Lineup and atlas:</b> every field tested at once for one region, or in every cell.</li>
     </ul>
     <h3>Significance</h3>

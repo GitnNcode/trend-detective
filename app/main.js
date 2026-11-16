@@ -143,6 +143,14 @@ function ensureField(v) {
   setTime(t);
 }
 
+// The shortest open-water path for the frame's year (Sea-ice route), drawn in
+// yellow beside the fixed route; null when that year had none.
+function bestPathOverlay(yr) {
+  const bp = app.R.bestPath;
+  const k = bp ? bp.years.indexOf(Math.floor(yr)) : -1;
+  return k >= 0 && bp.paths[k] ? { points: bp.paths[k], color: "#ffd60a" } : null;
+}
+
 export function frameYear(t) {
   const f = app.frames;
   if (!f) return NaN;
@@ -159,6 +167,10 @@ export function setTime(t) {
   if (app.R.track && app.map.overlay.track) {
     const yi = Math.round(Math.floor(yr) - app.R.track.years[0]);
     app.map.overlay.track.current = Math.max(0, Math.min(app.R.track.years.length - 1, yi));
+    app.map.requestRender();
+  }
+  if (app.state.mode === "route" && app.R.bestPath) {
+    app.map.overlay.best = bestPathOverlay(yr);
     app.map.requestRender();
   }
   vectorFrame();
@@ -286,6 +298,7 @@ export async function update(changed = []) {
       R.routeMK = E.mannKendall(ann);
       R.routeVerdict = E.verdict(R.routeTrend, R.routeMK, "months");
       R.routeDetection = A ? A.detectionHorizon(ann) : null;
+      R.bestPath = memo(`bp|${s.variable}|${route.id}|${mkey(s)}|${s.band.max}`, () => E.bestPath(v, route, { max: s.band.max ?? 0.15, months }));
     }
     if (s.mode === "flow" && A) {
       R.flow = memo(`vf|${s.variable}|${mkey(s)}`, () => A.velocityField(v, months));
@@ -564,6 +577,7 @@ export function applyScene() {
   if (s.mode === "route" && R.routeOpen) {
     ov.routes.push({ points: R.routeOpen.samples, color: "#ffffff" });
     ov.choke = R.routeOpen.chokePoint;
+    ov.best = bestPathOverlay(frameYear(app.t));
     scene.iso = s.band.max ?? 0.15;
   }
   if (s.overlayRoute && s.mode !== "route") {

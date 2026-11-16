@@ -712,7 +712,7 @@ export class MapView {
       ctx.strokeStyle = "#007aff"; ctx.lineWidth = 1.8; ctx.stroke();
     }
 
-    for (const r of ov.routes ?? []) {
+    for (const r of ov.best ? [...(ov.routes ?? []), ov.best] : ov.routes ?? []) {
       const geo = { type: "LineString", coordinates: r.points.map(([la, lo]) => [lo, la]) };
       ctx.beginPath(); path(geo);
       ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.stroke();

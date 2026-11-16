@@ -143,6 +143,22 @@ function detectionCard(det) {
     <div class="wcap">${Number.isFinite(det.nStar) && det.nStar < 999 ? `${Math.round(det.nStar)} years needed to detect a trend this size; the record has ${Math.round(det.nYears)}` : `A trend this size may never be detectable; the record has ${Math.round(det.nYears)} years`}</div>`);
 }
 
+// Sea-ice route: the shortest open-water path between the route's ends,
+// searched fresh each year rather than along the fixed waypoints.
+function bestPathCard(bp) {
+  if (!bp) return "";
+  const km = (x) => `${Math.round(x).toLocaleString("en-US")} km`;
+  const open = bp.years.map((y, k) => k).filter((k) => Number.isFinite(bp.lengthKm[k]));
+  const last = open.at(-1);
+  if (last == null) return card("ship", "Best open path", `<div class="wbig">none</div><div class="wcap">no open-water path between the route's ends in any year</div>`);
+  const L = bp.lengthKm[last], d = L - bp.fixedKm;
+  const vs = Math.abs(d) < 0.03 * bp.fixedKm ? "about the same as" : d < 0 ? `${km(-d)} shorter than` : `${km(d)} longer than`;
+  const why = d >= 0.03 * bp.fixedKm ? ": the fixed route was blocked, so this is a detour around the ice" : "";
+  return card("ship", "Best open path", `<div class="wbig">${km(L)}</div>
+    <div class="wcap">shortest open-water path in ${bp.years[last]} (${MONTH_SHORT[bp.bestMonth[last] - 1]}), ${vs} the fixed route (${km(bp.fixedKm)})${why}. Found in ${open.length} of ${bp.years.length} years, first in ${bp.years[open[0]]}. Yellow line on the map; it follows the frame year.</div>`);
+}
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 function hero(place, big, unit, line1, line2) {
   return `<div class="wplace">${esc(place)}</div>
     <div class="wnum">${big}<span>${esc(unit)}</span></div>
@@ -185,7 +201,7 @@ export function renderInspector() {
     const first = ro.years.find((y, k) => ro.openMonths[k] > 0);
     A.innerHTML = card("ship", "First open", `<div class="wbig">${first ?? "never"}</div><div class="wcap">first year with an open month</div>`, { half: true })
       + card("chart", "Open months", `<div class="wbig">${fmtNum(avg(ro.openMonths.slice(-10)), 2)}</div><div class="wcap">per year, last 10 years (was ${fmtNum(avg(ro.openMonths.slice(0, 10)), 2)})</div>`, { half: true })
-      + pCards(vd.pT, vd.pMK, vd.n);
+      + pCards(vd.pT, vd.pMK, vd.n) + bestPathCard(R.bestPath);
     chartTitle = "Open months per year"; chartRight = esc(monthsLabel(ro.months));
     spec = { kind: "bars", years: ro.years, values: ro.openMonths, max: ro.months.length, units: "mo", fit: true, color: "#5ac8fa", format: (v) => `${v}/${ro.months.length} mo` };
     B.innerHTML = detectionCard(R.routeDetection);

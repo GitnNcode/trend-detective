@@ -60,7 +60,7 @@ function statsLine(app) {
   }
   if (s.mode === "route" && R.routeVerdict) {
     const v = R.routeVerdict;
-    return `Open-water months ${sg(v.perDecade)} per decade (95%: ${sg(v.ci95PerDecade[0])} to ${sg(v.ci95PerDecade[1])}); t-test p ${pf(v.pT)}; Mann–Kendall p ${pf(v.pMK)}; ${lvl(v.level)}; n = ${v.n}.`;
+    return `Open-water months ${sg(v.perDecade)} per decade (95%: ${sg(v.ci95PerDecade[0])} to ${sg(v.ci95PerDecade[1])}); t-test p ${pf(v.pT)}; Mann–Kendall p ${pf(v.pMK)}; ${lvl(v.level)}; n = ${v.n}.${bestLine(R.bestPath)}`;
   }
   if (s.mode === "flow" && R.flowSummary) return `Climate velocity: median ${R.flowSummary.medianKmPerDecade.toPrecision(3)} km/decade, mean ${R.flowSummary.meanKmPerDecade.toPrecision(3)} km/decade over the region.`;
   if (s.mode === "twin" && R.twin) {
@@ -71,4 +71,10 @@ function statsLine(app) {
   const pct = /0 to 1/.test(unitsOf(s.variable));
   const f = pct ? 100 : 1, u = pct ? "pp" : unitsOf(s.variable);
   return `Trend ${sg(v.perDecade * f)} ${u}/decade (95%: ${sg(v.ci95PerDecade[0] * f)} to ${sg(v.ci95PerDecade[1] * f)}); t-test p ${pf(v.pT)}; Mann–Kendall p ${pf(v.pMK)}; ${lvl(v.level)}; n = ${v.n} years.`;
+}
+
+// Sea-ice route: the latest year's shortest open-water path, if any.
+function bestLine(bp) {
+  const k = bp ? bp.years.findLastIndex((_, i) => Number.isFinite(bp.lengthKm[i])) : -1;
+  return k < 0 ? "" : ` Shortest open path ${Math.round(bp.lengthKm[k])} km in ${bp.years[k]} (fixed route ${Math.round(bp.fixedKm)} km).`;
 }

@@ -26,12 +26,14 @@
 //   routeOpen(v, route, { max, greatCircle, months })
 //     -> { years, openMonths, openMonthList, samples: [[lat, lon]], chokePointIndex, chokePoint, months }
 //   sampleRoute(route, grid, { greatCircle }) -> [[lat, lon], ...]  the path routeOpen samples
+//   bestPath(v, route, { max, months })
+//     -> { years, lengthKm, bestMonth, paths: ([[lat, lon]] | null)[], fixedKm }  shortest open-water path each year
 
 export { loadVariable, regionSeries } from "./grid.js";
 export { deseasonalize, annualMeans, linearTrend, mannKendall, verdict } from "./stats.js";
 export { trendMap } from "./fields.js";
 export { bandTrack, bandSummary } from "./band.js";
-export { routeOpen } from "./route.js";
+export { routeOpen, bestPath } from "./route.js";
 
 // Helpers that the interface may also want.
 export {

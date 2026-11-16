@@ -1,6 +1,6 @@
 // Route mode: how many months a year a shipping route is open. Pure, no DOM.
 
-import { normLon, latOf, lonOf, lonIndex, thresholdBounds } from "./grid.js";
+import { normLon, latOf, lonOf, lonIndex, thresholdBounds, EARTH_RADIUS_KM } from "./grid.js";
 import { parseMonth, monthOfIndex, seasonPlan } from "./time.js";
 
 const rad = Math.PI / 180;
@@ -129,4 +129,155 @@ export function routeOpen(v, route, opts = {}) {
     max,
     months: Array.from({ length: 12 }, (_, k) => k + 1).filter((m) => plan.selected[m]),
   };
+}
+
+// bestPath(v, route, { max, months })
+//
+// The shortest open-water path between a route's two ends, found fresh for
+// every month instead of following the fixed waypoints. A cell is passable
+// when its value is at or below `max` (land and other missing cells never
+// are). Moves go to the eight neighbouring cells; each step costs the great
+// circle distance between cell centres, so the path is the shortest sea
+// distance through open water on the grid. Dijkstra, one run per checked
+// month. Ends that fall on land snap to the nearest cell with data.
+//   years[y]       as routeOpen
+//   lengthKm[y]    shortest open path in years[y] over the checked months,
+//                  NaN when no month had one
+//   bestMonth[y]   the month (1..12) of that path, 0 when none
+//   paths[y]       [[lat, lon], ...] cell centres of that path, or null
+//   fixedKm        length of the fixed route as routeOpen samples it, for
+//                  comparison
+// ponytail: cell-centre grid at 1° x 1.25°, so lengths are rough (about
+// ±5%) and narrow straits may close; a finer grid is the upgrade path.
+export function bestPath(v, route, opts = {}) {
+  const max = opts.max ?? 0.15;
+  const { hi } = thresholdBounds(null, max);
+  const { entry } = v;
+  const g = entry.grid;
+  const { nlat, nlon } = g;
+  const wrap = nlon * g.dlon >= 359.999;
+  const pts = route.points ?? route;
+  const n = nlat * nlon;
+
+  // Step lengths: along a row, along a column, and diagonally up from row i.
+  const ew = new Float64Array(nlat), diag = new Float64Array(nlat);
+  for (let i = 0; i < nlat; i++) {
+    const la = latOf(g, i);
+    ew[i] = hav(la, 0, la, g.dlon);
+    diag[i] = i + 1 < nlat ? hav(la, 0, la + g.dlat, g.dlon) : Infinity;
+  }
+  const ns = hav(0, 0, g.dlat, 0);
+
+  const snap = (lat, lon) => {
+    let best = -1, bd = Infinity;
+    for (let c = 0; c < n; c++) {
+      const i = Math.floor(c / nlon), j = c % nlon;
+      if (!(v.value(0, i, j) === v.value(0, i, j))) continue;
+      const d = hav(lat, lon, latOf(g, i), lonOf(g, j));
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best;
+  };
+  const src = snap(pts[0][0], normLon(pts[0][1]));
+  const dst = snap(pts.at(-1)[0], normLon(pts.at(-1)[1]));
+
+  const plan = seasonPlan(opts.months);
+  const { year: y0, month: m0 } = parseMonth(entry.start);
+  const byYear = new Map();
+  const dist = new Float64Array(n), prev = new Int32Array(n), open = new Uint8Array(n);
+
+  for (let t = 0; t < entry.nt; t++) {
+    const { year, month } = monthOfIndex(y0, m0, t);
+    if (!plan.selected[month]) continue;
+    const sy = year + plan.yearShift[month];
+    if (!byYear.has(sy)) byYear.set(sy, { n: 0, km: NaN, month: 0, path: null });
+    const rec = byYear.get(sy);
+    rec.n++;
+    if (src < 0 || dst < 0) continue;
+
+    for (let c = 0; c < n; c++) {
+      const val = v.value(t, Math.floor(c / nlon), c % nlon);
+      open[c] = val === val && val <= hi ? 1 : 0;
+    }
+    if (!open[src] || !open[dst]) continue;
+    const km = dijkstra(src, dst, open, dist, prev, nlat, nlon, wrap, ew, ns, diag);
+    if (km < (rec.km === rec.km ? rec.km : Infinity)) {
+      rec.km = km; rec.month = month;
+      const path = [];
+      for (let c = dst; c >= 0; c = c === src ? -1 : prev[c]) path.push([latOf(g, Math.floor(c / nlon)), lonOf(g, c % nlon)]);
+      rec.path = path.reverse();
+    }
+  }
+
+  const years = [...byYear.keys()].filter((y) => byYear.get(y).n === plan.count).sort((a, b) => a - b);
+  const fixed = sampleCells(route, g, opts);
+  let fixedKm = 0;
+  for (let k = 1; k < fixed.length; k++) fixedKm += hav(fixed[k - 1].lat, fixed[k - 1].lon, fixed[k].lat, fixed[k].lon);
+  return {
+    years,
+    lengthKm: Float64Array.from(years, (y) => byYear.get(y).km),
+    bestMonth: years.map((y) => byYear.get(y).month),
+    paths: years.map((y) => byYear.get(y).path),
+    fixedKm,
+    max,
+  };
+}
+
+function hav(la1, lo1, la2, lo2) {
+  const a = Math.sin(((la2 - la1) * rad) / 2) ** 2
+    + Math.cos(la1 * rad) * Math.cos(la2 * rad) * Math.sin(((lo2 - lo1) * rad) / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+// Dijkstra on the 8-connected grid with a binary heap. Fills dist and prev;
+// returns the distance to dst (Infinity if unreachable).
+function dijkstra(src, dst, open, dist, prev, nlat, nlon, wrap, ew, ns, diag) {
+  dist.fill(Infinity); prev.fill(-1);
+  const heap = [], key = [];
+  const push = (c, d) => {
+    let k = heap.length; heap.push(c); key.push(d);
+    while (k > 0) {
+      const p = (k - 1) >> 1;
+      if (key[p] <= d) break;
+      heap[k] = heap[p]; key[k] = key[p]; k = p;
+    }
+    heap[k] = c; key[k] = d;
+  };
+  const pop = () => {
+    const top = heap[0], lastC = heap.pop(), lastD = key.pop();
+    if (heap.length) {
+      let k = 0;
+      for (;;) {
+        let m = 2 * k + 1;
+        if (m >= heap.length) break;
+        if (m + 1 < heap.length && key[m + 1] < key[m]) m++;
+        if (key[m] >= lastD) break;
+        heap[k] = heap[m]; key[k] = key[m]; k = m;
+      }
+      heap[k] = lastC; key[k] = lastD;
+    }
+    return top;
+  };
+  dist[src] = 0; push(src, 0);
+  while (heap.length) {
+    const d0 = key[0], c = pop();
+    if (d0 > dist[c]) continue;
+    if (c === dst) return d0;
+    const i = Math.floor(c / nlon), j = c % nlon;
+    for (let di = -1; di <= 1; di++) {
+      const ii = i + di;
+      if (ii < 0 || ii >= nlat) continue;
+      for (let dj = -1; dj <= 1; dj++) {
+        if (!di && !dj) continue;
+        let jj = j + dj;
+        if (jj < 0 || jj >= nlon) { if (!wrap) continue; jj = (jj + nlon) % nlon; }
+        const nc = ii * nlon + jj;
+        if (!open[nc]) continue;
+        const step = !di ? ew[i] : !dj ? ns : diag[Math.min(i, ii)];
+        const nd = d0 + step;
+        if (nd < dist[nc]) { dist[nc] = nd; prev[nc] = c; push(nc, nd); }
+      }
+    }
+  }
+  return Infinity;
 }
