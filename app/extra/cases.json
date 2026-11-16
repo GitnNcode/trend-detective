@@ -345,5 +345,104 @@
         }
       }
     ]
+  },
+  {
+    "id": "air_and_altitude",
+    "title": "Cleaner here, hazier there",
+    "steps": [
+      {
+        "text": "Aerosol haze is how much sunlight tiny particles block: smoke, dust and pollution. This map shows its trend since 1980 in every grid cell. Blue means cleaner air, red means hazier.",
+        "action": {
+          "variable": "aod",
+          "region": "global",
+          "mode": "map",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      },
+      {
+        "text": "Same variable, opposite trends: over Europe the haze fell by about 0.026 per decade, while over northern India it rose by about 0.044 per decade. Both pass the significance tests.",
+        "action": {
+          "variable": "aod",
+          "region": "europe",
+          "mode": "compare",
+          "compare": "indo_gangetic",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      },
+      {
+        "text": "Northern China is trickier. Over the whole record the trend is only suggestive, because the haze rose until about 2013 and then fell. Looking only at 2013 onward, it drops by about 0.13 per decade: a straight line over the wrong period can hide a real change.",
+        "action": {
+          "variable": "aod",
+          "region": "north_china_plain",
+          "mode": "series",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "period": [
+            2013,
+            2025
+          ]
+        }
+      },
+      {
+        "text": "Up the mountains, the freezing level (the height where the air drops below 0 °C) is rising worldwide, by about 32 m per decade on average and about 70 m per decade over the Alps. Snow and glaciers can only last above it.",
+        "action": {
+          "variable": "fzlev",
+          "region": "alps",
+          "mode": "series",
+          "months": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      }
+    ]
   }
 ]

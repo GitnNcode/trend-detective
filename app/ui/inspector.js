@@ -221,7 +221,7 @@ export function renderInspector() {
     void vd;
   } else if (s.mode === "atlas" && R.atlas) {
     level = "significant";
-    heroEl.innerHTML = hero("Whole Earth", "10", " fields", "Trend in every grid cell", `${seasonCode(s.months)} · 1980–2025`);
+    heroEl.innerHTML = hero("Whole Earth", String(R.atlas.length), " fields", "Trend in every grid cell", `${seasonCode(s.months)} · 1980–2025`);
     A.innerHTML = card("grid", "Area with a significant trend", atlasRows(R.atlas));
     chartTitle = `${def.name}, global mean`; spec = seriesSpec(s, R);
   } else if (s.mode === "compare" && R.cmp) {

@@ -27,8 +27,9 @@ function lineup(app, el) {
   if (el.dataset.key === key) return;
   el.dataset.key = key;
   const list = R.lineup;
-  el.innerHTML = `<div class="panels">${list.map((x, k) => {
-    const vd = x.verdict, { factor, label } = E.displayUnits(x.units);
+  el.innerHTML = `<div class="panels four">${list.map((x, k) => {
+    const vd = x.verdict, { factor, label: full } = E.displayUnits(x.units);
+    const label = full === "percentage points" ? "pp" : full;
     const lvl = x.empty ? "none" : vd.level;
     return `<button class="pnl" data-id="${x.id}">
       <div class="pt"><span>${k + 1}. ${esc(varStyle(x.id).short)}</span><span class="v">${x.empty ? "no data" : `${signed(vd.perDecade * factor, 2)} ${esc(label)}/dec`}</span></div>
@@ -98,7 +99,7 @@ function atlas(app, el) {
   if (el.dataset.key === key) return;
   el.dataset.key = key;
   const items = R.atlas;
-  el.innerHTML = `<div class="panels">${items.map((it, k) => `<button class="pnl" data-id="${it.id}">
+  el.innerHTML = `<div class="panels four">${items.map((it, k) => `<button class="pnl" data-id="${it.id}">
       <div class="pt"><span>${esc(varStyle(it.id).short)}</span><span class="v" data-scale="${k}"></span></div>
       <canvas data-k="${k}"></canvas>
     </button>`).join("")}</div>

@@ -194,6 +194,7 @@ input[type="range"].trange { width: 130px; accent-color: var(--accent); }
 .sheet { position: absolute; inset: 0; z-index: 6; background: var(--surface); overflow: auto; padding: 8px 16px 16px; }
 .panels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 14px; }
 .panels.two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.panels.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .pnl { border: 0; background: none; padding: 0; text-align: left; color: var(--label); cursor: pointer; }
 .pnl .pt { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; color: var(--label); padding: 0 1px 4px; white-space: nowrap; }
 .pnl .pt > span:first-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
