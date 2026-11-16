@@ -24,6 +24,7 @@ Then visit http://localhost:8000/app/ (the root `index.html` redirects there). `
 
 | Product | What it shows |
 |---|---|
+| Tanker voyage planner (in Shipping routes) | Two oil terminals, tanker class, speed, month, fuel price: best route on a 0.5° grid with wind, currents and ice, priced options via each canal, best month to sail, every year since 1980, and five years ahead. Runs in a Web Worker (`app/ship-worker.js`) |
 | Shipping routes (opens first) | The fastest sea route between 11 pairs of big ports for every year since 1980, from sea ice and 10 m wind, drawn as year-coloured bands; a button projects the next five years from the recent trend |
 | Time series | Regional mean, trend, CI, significance; stripes and seasonal-cycle views |
 | Trend map | Per-cell trend, hatched where p ≥ 0.05; area census |

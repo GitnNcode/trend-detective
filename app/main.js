@@ -34,7 +34,7 @@ const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 // Arctic sea ice is lowest and the polar shortcuts can open.
 const SHIP_MONTHS = [9, 10, 11];
 const DEFAULTS = {
-  mode: "ship", variable: "shipslow", regionId: "global", custom: null, months: SHIP_MONTHS, shipForecast: false,
+  mode: "ship", variable: "shipslow", regionId: "global", custom: null, months: SHIP_MONTHS, shipForecast: false, voy: null,
   band: { min: 10, max: null }, route: "nsr", overlayRoute: null, proj: "auto", cadence: "annual",
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
@@ -158,6 +158,7 @@ function yearColor(f) {
   return `rgb(${[0, 1, 2].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t)).join(",")})`;
 }
 function shipOverlay(yr) {
+  if (app.state.voy && app.voyage) return voyageOverlay(app.voyage, yr);
   const sh = app.R.ship, fc = app.state.shipForecast;
   const routes = [], top = [], y0 = sh.years[0], span = Math.max(1, sh.years.at(-1) - y0);
   const k = sh.years.indexOf(Math.floor(yr));
@@ -171,6 +172,56 @@ function shipOverlay(yr) {
   const ports = new Map();
   for (const l of app.content.lanes) for (const p of [l.from, l.to]) ports.set(p.name, p);
   return { routes: [...routes, ...top], ports: [...ports.values()], choke: null };
+}
+
+// ---------- tanker voyage planner ----------
+// Planning runs in a Web Worker (ship-worker.js) on the fine ocean grid and
+// streams results back; each message redraws the map and the inspector.
+let shipWorker = null, voyageSeq = 0;
+function requestVoyage(voy) {
+  const key = JSON.stringify(voy);
+  if (app.voyage?.key === key) return;
+  shipWorker ??= makeShipWorker();
+  app.voyage = { key, id: ++voyageSeq, voy, status: "planning" };
+  shipWorker.postMessage({ type: "plan", id: app.voyage.id, voyage: voy });
+}
+function makeShipWorker() {
+  const w = new Worker(new URL("./ship-worker.js", import.meta.url), { type: "module" });
+  w.onmessage = (e) => {
+    const m = e.data, V = app.voyage;
+    if (!V || m.id !== V.id) return;
+    if (m.type === "now") Object.assign(V, { year: m.year, options: m.options, access: m.access });
+    else if (m.type === "forecast") V.forecast = { years: m.years, best: m.best };
+    else if (m.type === "months") V.months = m.rows;
+    else if (m.type === "history") V.history = { years: m.years, best: m.best };
+    else if (m.type === "done") { V.status = "done"; V.ms = m.ms; }
+    else if (m.type === "error") { V.status = "error"; V.error = m.message; console.warn("voyage planner:", m.message); }
+    if (app.state.mode !== "ship" || !app.R.ship) return;
+    Object.assign(app.map.overlay, shipOverlay(frameYear(app.t)));
+    app.map.requestRender();
+    W.renderInspector();
+  };
+  w.onerror = (e) => { if (app.voyage) { app.voyage.status = "error"; app.voyage.error = e.message || "worker failed"; W.renderInspector(); } };
+  return w;
+}
+// One voyage: its best route in every year as year-coloured bands, the frame
+// year's route in white, the other route options dashed orange, and with the
+// prediction on, the next five years dashed magenta.
+function voyageOverlay(V, yr) {
+  const fc = app.state.shipForecast, routes = [], top = [], H = V.history;
+  if (H) {
+    const y0 = H.years[0], span = Math.max(1, (V.year ?? H.years.at(-1)) - y0), latest = new Map();
+    H.best.forEach((b, y) => b && latest.set(JSON.stringify(b.path), y));
+    [...latest.entries()].sort((a, b) => a[1] - b[1]).forEach(([, y]) => routes.push({ points: H.best[y].path, color: yearColor((H.years[y] - y0) / span), width: 1.8, alpha: fc ? 0.35 : 0.9, halo: false }));
+  }
+  (V.options ?? []).slice(1).forEach((o) => top.push({ points: o.path, color: "#ff9f0a", width: 2, dash: [8, 5] }));
+  if (fc && V.forecast) V.forecast.best.forEach((b) => b && top.push({ points: b.path, color: "#ff2d95", width: 2.4, dash: [6, 4] }));
+  else {
+    const k = H ? H.years.indexOf(Math.floor(yr)) : -1;
+    const b = k >= 0 ? H.best[k] : V.options?.[0];
+    if (b) top.push({ points: b.path, color: "#ffffff", width: 3 });
+  }
+  return { routes: [...routes, ...top], ports: [V.voy.from, V.voy.to], choke: null };
 }
 
 // The shortest open-water path for the frame's year (Sea-ice route), drawn in
@@ -242,6 +293,11 @@ function autoProjection(s, region) {
 
 function framingRegion(s, region) {
   // Shipping routes: face Europe, the Middle East and the Arctic shortcuts.
+  if (s.mode === "ship" && s.voy) {
+    const a = s.voy.from, b = s.voy.to, dlon = ((b.lon - a.lon + 540) % 360) - 180, lo = a.lon + dlon / 2;
+    const half = Math.max(15, Math.abs(dlon) / 2 + 8), la0 = Math.min(a.lat, b.lat) - 10, la1 = Math.max(a.lat, b.lat) + 10;
+    return { latMin: Math.max(-80, la0), latMax: Math.min(85, la1), lonMin: lo - half, lonMax: lo + half };
+  }
   if (s.mode === "ship" && app.map.kind === "globe") return { latMin: 5, latMax: 80, lonMin: -40, lonMax: 130 };
   if (s.mode === "compare") {
     const b = app.content.regions.find((r) => r.id === s.compareId);
@@ -275,11 +331,11 @@ export async function update(changed = []) {
     W.ensureChart();
     app.map.setOptions({ cells: s.cells, contours: s.contours, coast: s.coast, grid: s.grid });
 
-    if (changed.some((k) => ["regionId", "custom", "variable", "proj", "mode", "init", "twin", "compareId"].includes(k))) {
+    if (changed.some((k) => ["regionId", "custom", "variable", "proj", "mode", "init", "twin", "compareId", "voy"].includes(k))) {
       const pk = autoProjection(s, region);
       const was = app.map.kind + app.map.polarSouth;
       app.map.setProjection(pk.kind, { south: pk.south });
-      if (changed.some((k) => ["regionId", "custom", "init", "twin", "mode", "compareId"].includes(k)) || was !== pk.kind + pk.south) {
+      if (changed.some((k) => ["regionId", "custom", "init", "twin", "mode", "compareId", "voy"].includes(k)) || was !== pk.kind + pk.south) {
         app.map.fitRegion(framingRegion(s, region), { animate: !changed.includes("init") });
       }
     }
@@ -346,6 +402,7 @@ export async function update(changed = []) {
       const [soil, ice, u, w] = await ensureVars(ids);
       if (my !== token) return;
       R.ship = memo(`ship|${mkey(s)}`, () => E.shippingLanes({ soil, ice, u: u ?? null, v: w ?? null }, app.content.lanes, { months }));
+      if (s.voy) requestVoyage(s.voy); else app.voyage = null;
     }
     if (s.mode === "flow" && A) {
       R.flow = memo(`vf|${s.variable}|${mkey(s)}`, () => A.velocityField(v, months));

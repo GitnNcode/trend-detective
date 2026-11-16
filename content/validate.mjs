@@ -99,6 +99,22 @@ const routeById = new Map();
   }
 }
 
+// ---- oil terminals (tanker planner) ----
+{
+  const f = "terminals.json";
+  const terms = load(f);
+  if (!Array.isArray(terms)) err(f, "must be an array");
+  else {
+    const ids = new Set();
+    for (const t of terms) {
+      if (!isStr(t.id) || !isStr(t.name) || !isStr(t.country)) err(f, "terminal needs id, name and country");
+      if (ids.has(t.id)) err(f, `duplicate terminal ${t.id}`);
+      ids.add(t.id);
+      if (!isNum(t.lat) || !isNum(t.lon) || Math.abs(t.lat) > 90 || Math.abs(t.lon) > 180) err(f, `terminal ${t.id}: bad lat/lon`);
+    }
+  }
+}
+
 // ---- shipping lanes ----
 {
   const f = "lanes.json";

@@ -2,7 +2,7 @@
 // and a one-line statistics caption, like a printed analysis chart.
 // Written with Claude and reviewed by the team.
 
-import { defOf, unitsOf, seasonCode } from "../main.js";
+import { app, defOf, unitsOf, seasonCode } from "../main.js";
 import { analogKm } from "./inspector.js";
 
 const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
@@ -57,6 +57,10 @@ function statsLine(app) {
   if (s.mode === "band" && R.bandSummary) {
     const b = R.bandSummary;
     return `Edge shift ${sg(b.edgeShiftKmPerDecade)} km/decade (poleward +), edge p ${pf(b.edgeP)}; area ${sg(b.areaPctPerDecade)} %/decade, p ${pf(b.areaP)}; ${b.kind}, ${lvl(b.level)}; n = ${R.track.years.length} years.`;
+  }
+  if (s.mode === "ship" && s.voy && app.voyage?.options?.[0]) {
+    const v = s.voy, V = app.voyage, b = V.options[0];
+    return `${v.from.name} to ${v.to.name}, ${v.cls} at ${v.speedKn} kn, ${V.year}-${String(v.month).padStart(2, "0")}: ${b.days.toFixed(1)} days via ${b.via.join(", ") || "open sea"}, ${Math.round(b.km)} km, about $${(b.cost / 1e6).toFixed(2)}M, ${Math.round(b.fuelT)} t fuel, ${Math.round(b.co2T)} t CO2 (MERRA-2 wind and ice, ECCO currents).`;
   }
   if (s.mode === "ship" && R.ship) {
     const sh = R.ship, y = sh.years.length - 1;

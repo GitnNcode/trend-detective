@@ -10,6 +10,7 @@ import * as D from "../data.js";
 import { varStyle } from "../palettes.js";
 import { app, actions, defOf, unitsOf, frameYear, setTime, setPlaying, seasonCode, monthsLabel } from "../main.js";
 import { fmtNum, signed, absUnits, nearestCityName, niceStep } from "./workstation.js";
+import { TANKERS, CANALS } from "../../engine/tanker.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -159,6 +160,72 @@ function bestPathCard(bp) {
 }
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// ---------------------------------------------------------------- tanker planner
+const money = (x) => (Number.isFinite(x) ? `$${(x / 1e6).toFixed(2)}M` : "–");
+const tons = (x) => (Number.isFinite(x) ? `${Math.round(x).toLocaleString("en-US")} t` : "–");
+const viaText = (via) => via.filter((x) => x !== "Gibraltar").join(", ") || "open sea";
+const DEFAULT_VOY = { from: "ras_tanura", to: "rotterdam", cls: "aframax", speedKn: 13, iceClass: false, fuelPrice: 600, objective: "cost", month: 11 };
+
+function plannerCard(s) {
+  const T = app.content.terminals ?? [], v = s.voy ?? DEFAULT_VOY;
+  const id = (x) => (typeof x === "string" ? x : x.id);
+  const terms = (sel) => T.map((t) => `<option value="${t.id}" ${t.id === id(sel) ? "selected" : ""}>${esc(t.name)}, ${esc(t.country)}</option>`).join("");
+  const sel = (key, opts) => opts.map(([val, lab]) => `<option value="${val}" ${String(v[key]) === String(val) ? "selected" : ""}>${esc(lab)}</option>`).join("");
+  return card("ship", "Plan a tanker voyage", `<div class="vform">
+    <label>From<select id="vFrom">${terms(v.from)}</select></label>
+    <label>To<select id="vTo">${terms(v.to)}</select></label>
+    <label>Tanker<select id="vCls">${sel("cls", Object.entries(TANKERS).map(([k, t]) => [k, `${t.name} (${Math.round(t.dwt / 1000)}k t)`]))}</select></label>
+    <label>Sail in<select id="vMon">${sel("month", MONTH_SHORT.map((m, k) => [k + 1, m]))}</select></label>
+    <label>Speed, knots<input id="vSpd" type="number" min="8" max="17" step="0.5" value="${v.speedKn}"></label>
+    <label>Fuel, $/t<input id="vFuel" type="number" min="200" max="1500" step="10" value="${v.fuelPrice}"></label>
+    <label>Optimize for<select id="vObj">${sel("objective", [["cost", "Lowest cost"], ["time", "Fastest"]])}</select></label>
+    <label class="chk"><input id="vIce" type="checkbox" ${v.iceClass ? "checked" : ""}> Ice class 1A</label>
+  </div>
+  <div class="vbtns"><button class="tb predict" id="vGo">${s.voy ? "Re-plan voyage" : "Plan voyage"}</button>${s.voy ? `<button class="tb" id="vClear">All lanes</button>` : ""}</div>`);
+}
+
+function bindPlanner(root, s) {
+  const $$ = (q) => root.querySelector(q);
+  $$("#vGo")?.addEventListener("click", () => {
+    const T = app.content.terminals, pick = (q) => { const t = T.find((x) => x.id === $$(q).value); return { id: t.id, name: t.name, lat: t.lat, lon: t.lon }; };
+    const num = (q, lo, hi, d) => { const x = Number($$(q).value); return Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : d; };
+    const voy = {
+      from: pick("#vFrom"), to: pick("#vTo"), cls: $$("#vCls").value, month: Number($$("#vMon").value),
+      speedKn: num("#vSpd", 8, 17, 13), fuelPrice: num("#vFuel", 200, 1500, 600), objective: $$("#vObj").value, iceClass: $$("#vIce").checked,
+    };
+    if (voy.from.id === voy.to.id) return;
+    actions.set({ voy, months: [voy.month], shipForecast: false });
+  });
+  $$("#vClear")?.addEventListener("click", () => actions.set({ voy: null, months: [9, 10, 11], shipForecast: false }));
+}
+
+function optionsCard(V, v) {
+  const rows = V.options.map((o, k) => `<div class="vopt ${k === 0 ? "best" : ""}"><span>${k === 0 ? "Best: " : ""}via ${esc(viaText(o.via))}</span><b>${fmtNum(o.days, 3)} d</b><em>${money(o.cost)}</em>
+    <i>${Math.round(o.km).toLocaleString("en-US")} km · ${tons(o.fuelT)} fuel · ${tons(o.co2T)} CO₂${o.tolls ? ` · tolls $${Math.round(o.tolls / 1000)}k` : ""}</i></div>`).join("");
+  const blocked = Object.entries(V.access ?? {}).filter(([, why]) => why).map(([id, why]) => `<div class="wcap">${esc(CANALS[id].name)}: ${esc(why)}</div>`).join("");
+  return card("chart", `Route options, ${MONTH_SHORT[v.month - 1]} ${V.year}`, (rows || `<div class="wcap">No open route.</div>`) + blocked + `<div class="wcap">${v.objective === "time" ? "Ranked by days at sea." : "Ranked by total cost: time charter, fuel and canal tolls."} White line on the map: best; dashed orange: the others.</div>`);
+}
+
+function monthsCard(V, v) {
+  const ok = V.months.filter((r) => Number.isFinite(r.days)), key = v.objective === "time" ? "days" : "cost";
+  const lo = Math.min(...ok.map((r) => r.days)), hi = Math.max(...ok.map((r) => r.days)), best = ok.reduce((a, b) => (b[key] < a[key] ? b : a), ok[0]);
+  const rows = V.months.map((r) => {
+    const w = Number.isFinite(r.days) ? 20 + 80 * ((r.days - lo) / Math.max(0.01, hi - lo)) : 0;
+    return `<div class="vmon ${r === best ? "best" : ""} ${r.month === v.month ? "cur" : ""}" title="${esc(viaText(r.via))}"><span>${MONTH_SHORT[r.month - 1]}</span><div><i style="width:${w}%"></i></div><b>${Number.isFinite(r.days) ? fmtNum(r.days, 3) + " d" : "closed"}</b></div>`;
+  }).join("");
+  return card("clock", "Best month to sail", rows + `<div class="wcap">${best ? `${MONTH_SHORT[best.month - 1]} is ${v.objective === "time" ? "fastest" : "cheapest"} (via ${esc(viaText(best.via))}), using ${best.year} weather and ice.` : ""}</div>`);
+}
+
+function forecastCard(V, now) {
+  const rows = V.forecast.years.map((y, k) => {
+    const b = V.forecast.best[k];
+    if (!b) return `<div class="vopt"><span>${y}</span><b>closed</b><em></em></div>`;
+    const d = now ? b.days - now.days : NaN;
+    return `<div class="vopt"><span>${y}</span><b>${fmtNum(b.days, 3)} d</b><em class="${d < -0.05 ? "dn" : d > 0.05 ? "up" : ""}">${Number.isFinite(d) ? signed(d, 2) + " d" : ""}</em><i>via ${esc(viaText(b.via))} · ${money(b.cost)}</i></div>`;
+  }).join("");
+  return card("trend", "Predicted, next 5 years", rows + `<div class="wcap">Change from ${V.year}. From each cell's 20-year trend in sea ice and wind; dashed magenta on the map when the prediction is on.</div>`);
+}
+
 // Shipping routes: one row per lane. History: days at sea in the latest year,
 // change from the 1980s mean, passages used. Prediction: the last projected
 // year, and how many of the five projected years use an Arctic route.
@@ -196,7 +263,31 @@ export function renderInspector() {
   let spec = null, level = "none", chartTitle = "", chartRight = "", tip = "";
   A.innerHTML = ""; B.innerHTML = "";
 
-  if (s.mode === "ship" && R.ship) {
+  if (s.mode === "ship" && R.ship && s.voy) {
+    const v = s.voy, V = app.voyage, best = V?.options?.[0], fc = s.shipForecast && V?.forecast;
+    level = "significant";
+    tip = "The white line is the cheapest (or fastest) route for this tanker in the latest year; dashed orange lines are the other options; coloured bands are the best route in every year since 1980.";
+    const title = `${v.from.name} → ${v.to.name}`;
+    if (!best) {
+      const msg = V?.status === "error" ? `Planner error: ${esc(V.error)}` : V?.options ? "No route: blocked by ice or land for this ship" : "Planning on the 55 km ocean grid…";
+      heroEl.innerHTML = hero(title, V?.options ? "none" : "…", "", msg, `${esc(TANKERS[v.cls].name)} · ${MONTH_SHORT[v.month - 1]}`);
+    } else {
+      const fb = fc ? V.forecast.best.at(-1) : null, show = fb ?? best;
+      heroEl.innerHTML = hero(fb ? `${title}, predicted ${V.forecast.years.at(-1)}` : title, fmtNum(show.days, 3), " days",
+        `via ${esc(viaText(show.via))} · ${esc(TANKERS[v.cls].name)} at ${v.speedKn} kn`,
+        `${money(show.cost)} · ${tons(show.fuelT)} fuel · ${tons(show.co2T)} CO₂ · ${MONTH_SHORT[v.month - 1]} ${fb ? V.forecast.years.at(-1) : V.year}`);
+      if (V.forecast) {
+        heroEl.insertAdjacentHTML("beforeend", `<button class="tb predict ${fc ? "on" : ""}" id="shipFc" title="Plan this voyage for each of the next five years from the recent trend in sea ice and wind">${fc ? "Back to past routes" : "Predict next 5 years"}</button>`);
+        heroEl.querySelector("#shipFc").addEventListener("click", () => actions.set({ shipForecast: !s.shipForecast }));
+      }
+    }
+    A.innerHTML = plannerCard(s) + (V?.options ? optionsCard(V, v) : "") + (V?.months ? monthsCard(V, v) : "");
+    bindPlanner(A, s);
+    const H = V?.history;
+    chartTitle = "Best-route days at sea, every year"; chartRight = `${MONTH_SHORT[v.month - 1]} · ${H ? `${H.years.length} yr` : "loading"}`;
+    spec = H ? { kind: "series", years: H.years, values: H.best.map((b) => (b ? b.days : NaN)), units: "d", fit: true, format: (x) => `${fmtNum(x, 3)} d`, emptyText: "computing" } : null;
+    B.innerHTML = (V?.forecast ? forecastCard(V, best) : "") + card("list", "How the voyage is planned", `<div class="wcap">The ocean is NASA's 0.5° MERRA-2 land/sea grid (about 55 km). A* search finds the route with the least sailing time: 10 m wind slows the ship (head wind most), ocean currents from NASA's ECCO model speed it up or slow it down, and sea ice slows it more (closed above 15% ice, or 50% with ice class). It then closes each canal the route used and searches again, so every realistic option gets a price: days × (day rate + fuel × fuel price) + canal tolls. Fuel follows the cube of speed; CO₂ is 3.114 t per t of fuel. A laden VLCC is too deep for Suez and too wide for Panama.<br><br><b>Prediction:</b> each cell's 20-year trend in ice and wind, extended five years, then the same search. Tolls, day rates and fuel figures are round public numbers, not quotes.</div>`);
+  } else if (s.mode === "ship" && R.ship) {
     const sh = R.ship, fc = s.shipForecast && sh.forecast.years.length;
     const arctic = (via) => via.some((x) => x === "Northern Sea Route" || x === "Northwest Passage");
     const counts = sh.years.map((_, y) => sh.lanes.filter((l) => arctic(l.via[y])).length);
@@ -208,7 +299,8 @@ export function renderInspector() {
       "lanes take an Arctic shortcut", `${esc(monthsLabel(s.months))} · ${sh.inputs.wind ? "sea ice and 10 m wind" : "sea ice only (no surface wind file)"}`);
     heroEl.insertAdjacentHTML("beforeend", `<button class="tb predict ${fc ? "on" : ""}" id="shipFc" title="Project the fastest routes for the next five years from the recent trend in sea ice and wind">${fc ? "Back to past routes" : "Predict next 5 years"}</button>`);
     heroEl.querySelector("#shipFc").addEventListener("click", () => actions.set({ shipForecast: !s.shipForecast }));
-    A.innerHTML = card("ship", fc ? `Next 5 years (${sh.forecast.years[0]}–${sh.forecast.years[fy]})` : "Lanes", shipRows(sh, fc));
+    A.innerHTML = plannerCard(s) + card("ship", fc ? `Next 5 years (${sh.forecast.years[0]}–${sh.forecast.years[fy]})` : "Lanes", shipRows(sh, fc));
+    bindPlanner(A, s);
     chartTitle = "Lanes using an Arctic route"; chartRight = esc(monthsLabel(s.months));
     spec = { kind: "bars", years: sh.years, values: counts, max: sh.lanes.length, units: "lanes", fit: false, color: "#ffd60a", format: (v) => `${v} of ${sh.lanes.length}` };
     B.innerHTML = card("list", "How the routes are found", `<div class="wcap">The ocean is a grid of cells about 200 km across. For each year, a computer search (A*) finds the path between two ports that takes the least sailing time at 14 knots. Head winds slow the ship (a 10 m/s head wind costs about 15%), sea ice slows it more, and water with over 50% ice is closed. Canals and narrow straits are opened by hand.<br><br><b>Prediction:</b> a straight-line trend through the last 20 years of sea ice and wind in every cell, extended five years, then the same search. It shows where the drift points, not next year's weather.</div>`);

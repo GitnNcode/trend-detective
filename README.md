@@ -8,6 +8,7 @@ Trend Detective is a free website that lets a student act as a data detective wi
 
 ## What it does
 
+- **Tanker voyage planner** (in the opening view): choose two of 32 oil terminals, a tanker class (VLCC, Suezmax, Aframax, LR1), speed, month and fuel price. It searches NASA's 0.5° ocean grid with 10 m wind, ECCO ocean currents and sea ice, checks which canals the ship fits, and prices every realistic route (days, fuel, CO2, tolls, total cost). It also shows the best month to sail, the best route in every year since 1980, and a five-year prediction.
 - **Shipping routes** (the opening view): the fastest sea route between 11 pairs of big oil, gas, container and bulk ports, worked out for every year since 1980 from sea ice and 10 m wind and drawn on the globe as year-coloured bands. **Predict next 5 years** extends the recent trend in ice and wind and shows where the routes are heading.
 - **Time series** for any region: annual means since 1980, trend line, rate per decade with a 95% interval, t-test and Mann-Kendall verdict, a "years needed to detect" estimate, stripes and seasonal-cycle views.
 - **Trend map:** the trend in every grid cell, with non-significant cells hatched, so you can see where one variable rises in one place and falls in another.
@@ -30,7 +31,8 @@ NASA MERRA-2 monthly means, January 1980 to the latest available month, from NAS
 | M2TMNXFLX (surface fluxes) | precipitation (PRECTOTCORR), evaporation, sea ice fraction (FRSEAICE) |
 | M2TMNXLND (land surface) | root-zone soil wetness, snow mass, runoff |
 | M2TMNXAER (aerosols) | total aerosol optical depth at 550 nm |
-| M2C0NXASM (constants) | ocean fraction, surface geopotential (for freezing-level height) |
+| M2C0NXASM (constants) | ocean fraction (also the 0.5° land/sea grid for tanker routing), surface geopotential (for freezing-level height) |
+| ECCO V4r4 ocean velocity (PO.DAAC) | surface currents (EVEL, NVEL), monthly climatology 2008-2017, for tanker routing |
 
 Validation references: NASA GISS Surface Temperature Analysis (GISTEMP v4) and the NSIDC Sea Ice Index (G02135). Full citations are in [docs/REFERENCES.md](docs/REFERENCES.md).
 

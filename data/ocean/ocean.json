@@ -1,0 +1,42 @@
+{
+  "mask": {
+    "file": "mask.bin",
+    "type": "uint8",
+    "units": "percent ocean",
+    "grid": {
+      "nlat": 361,
+      "nlon": 576,
+      "lat0": -90.0,
+      "lon0": -180.0,
+      "dlat": 0.5,
+      "dlon": 0.625
+    },
+    "source": "MERRA-2 M2C0NXASM FROCEAN, native grid"
+  },
+  "currents": {
+    "file": "currents.bin",
+    "type": "int16",
+    "scale": 0.001,
+    "missing": -32768,
+    "units": "m/s",
+    "shape": [
+      12,
+      2,
+      180,
+      360
+    ],
+    "grid": {
+      "nlat": 180,
+      "nlon": 360,
+      "lat0": -89.5,
+      "lon0": -179.5,
+      "dlat": 1.0,
+      "dlon": 1.0
+    },
+    "years": [
+      2008,
+      2017
+    ],
+    "source": "ECCO V4r4 ocean velocity, monthly mean 0.5 deg, top level (EVEL, NVEL), monthly climatology"
+  }
+}

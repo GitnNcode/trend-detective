@@ -81,7 +81,8 @@ export function oceanMask(soil, ice = null, { gates = GATES, southLimit = SHIP.s
       if (list && list.length && list.every((k) => ice.data[k] === MISSING && ice.data[ni + k] === MISSING)) sea[c] = 0;
     }
   }
-  for (let i = 0; i < g.nlat; i++) if (latOf(g, i) < southLimit) sea.fill(0, i * g.nlon, (i + 1) * g.nlon);
+  // Below southLimit, and the pole rows (all one point: moving along them would be free).
+  for (let i = 0; i < g.nlat; i++) if (latOf(g, i) < southLimit || latOf(g, i) > 88) sea.fill(0, i * g.nlon, (i + 1) * g.nlon);
   for (const gate of gates) for (const c of sampleCells(gate, g)) sea[c.i * g.nlon + c.j] = 1;
   return sea;
 }
@@ -142,11 +143,11 @@ export function seasonStates({ soil, ice, u, v }, months) {
 // predictable this way, only the drift.
 export function projectStates({ years, states }, ahead = 5, { window = 20 } = {}) {
   const k0 = Math.max(0, years.length - window), ys = years.slice(k0), m = ys.length;
-  const n = states[0].u.length, last = years.at(-1);
+  const last = years.at(-1), keys = Object.keys(states[0]);
   const xm = ys.reduce((a, b) => a + b, 0) / m;
   const sxx = ys.reduce((a, y) => a + (y - xm) ** 2, 0);
   const fit = (key) => {
-    const a = new Float32Array(n), b = new Float32Array(n);
+    const n = states[0][key].length, a = new Float32Array(n), b = new Float32Array(n);
     for (let c = 0; c < n; c++) {
       let sy = 0, sxy = 0, k = 0;
       for (let y = 0; y < m; y++) { const val = states[k0 + y][key][c]; if (val === val) { sy += val; k++; } }
@@ -156,12 +157,12 @@ export function projectStates({ years, states }, ahead = 5, { window = 20 } = {}
     }
     return { a, b };
   };
-  const F = { u: fit("u"), v: fit("v"), ice: fit("ice") };
+  const F = Object.fromEntries(keys.map((k) => [k, fit(k)]));
   const out = [];
   for (let h = 1; h <= ahead; h++) {
     const yr = last + h, st = {};
-    for (const key of ["u", "v", "ice"]) {
-      const f = new Float32Array(n);
+    for (const key of keys) {
+      const n = F[key].a.length, f = new Float32Array(n);
       for (let c = 0; c < n; c++) f[c] = F[key].a[c] + F[key].b[c] * (yr - xm);
       if (key === "ice") for (let c = 0; c < n; c++) f[c] = Math.min(1, Math.max(0, f[c] || 0));
       st[key] = f;

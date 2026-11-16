@@ -251,3 +251,26 @@ input[type="range"].trange { width: 130px; accent-color: var(--accent); }
 .wship i { grid-area: v; font-style: normal; font-size: 11px; color: var(--label-2); }
 .tb.predict { display: block; margin: 10px auto 0; padding: 0 16px; height: 30px; font-size: 13px; background: #ff2d95; color: #fff; border-color: #ff2d95; font-weight: 600; }
 .tb.predict.on { background: transparent; color: #ff2d95; }
+
+/* Tanker voyage planner */
+.vform { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; font-size: 11.5px; color: var(--label-2); }
+.vform label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vform select, .vform input[type="number"] { font: inherit; font-size: 12.5px; color: var(--label, #000); padding: 3px 4px; border: 0.5px solid var(--sep-strong); border-radius: 6px; background: var(--fill-2, #fff); min-width: 0; width: 100%; }
+.vform label.chk { flex-direction: row; align-items: center; gap: 6px; padding-top: 14px; }
+.vbtns { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.vbtns .tb.predict { margin: 0; }
+.vopt { display: grid; grid-template-columns: 1fr 56px 64px; grid-template-areas: "n d c" "v v v"; column-gap: 6px; font-size: 12.5px; padding: 4px 0; }
+.vopt + .vopt { border-top: 0.5px solid var(--sep); }
+.vopt span { grid-area: n; font-weight: 600; }
+.vopt.best span { color: #ff2d95; }
+.vopt b { grid-area: d; text-align: right; font-weight: 600; }
+.vopt em { grid-area: c; text-align: right; font-style: normal; color: var(--label-2); }
+.vopt em.dn { color: #34c759; }
+.vopt em.up { color: #ff9500; }
+.vopt i { grid-area: v; font-style: normal; font-size: 11px; color: var(--label-2); }
+.vmon { display: grid; grid-template-columns: 30px 1fr 52px; align-items: center; gap: 6px; font-size: 12px; padding: 1px 0; }
+.vmon div { height: 8px; background: var(--fill-2, #eee); border-radius: 4px; overflow: hidden; }
+.vmon div i { display: block; height: 100%; background: #8e8e93; border-radius: 4px; }
+.vmon.best div i { background: #34c759; }
+.vmon.cur span { font-weight: 700; }
+.vmon b { text-align: right; font-weight: 600; }
