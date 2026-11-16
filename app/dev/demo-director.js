@@ -100,7 +100,7 @@ function buildTimeline() {
   moveTo(14.1, 14.45, () => menuItem("cleaner over Europe"));
   events.push([14.35, hover("cleaner over Europe")]);
   click(14.6, async () => { await choose("cleaner over Europe")(); app.set(COMPARE); await settle(); });
-  moveTo(15.4, 16.6, () => document.getElementById("iHero"), { dy: 6 });
+  moveTo(15.4, 16.6, () => document.getElementById("iHero"), { dx: 128, dy: 8 });
   // Scene 5: Product > Vector loop.
   moveTo(17.6, 18.1, () => menuButton("Product"));
   click(18.15, openMenu("Product"));
