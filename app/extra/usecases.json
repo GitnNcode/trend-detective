@@ -608,5 +608,50 @@
       "min": 4000,
       "max": null
     }
+  },
+  {
+    "prompt": "Is the air getting cleaner over Europe but hazier over India?",
+    "variable": "aod",
+    "region": "europe",
+    "compare": "indo_gangetic",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "compare"
+  },
+  {
+    "prompt": "Has the air over northern China cleared since 2013?",
+    "variable": "aod",
+    "region": "north_china_plain",
+    "months": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "mode": "series",
+    "period": [
+      2013,
+      2025
+    ]
   }
 ]

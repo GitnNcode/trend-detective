@@ -186,7 +186,7 @@ export function renderInspector() {
     level = "significant";
     const kmd = fs?.medianKmPerDecade;
     if (s.mode === "vectors" && R.vecKind === "wind") {
-      heroEl.innerHTML = hero(where, fmtNum(fs.meanSpeed, 3), " m/s", "Mean wind at 250 hPa", `Frame ${esc(app.frames?.labels[Math.round(app.t)] ?? "")}`);
+      heroEl.innerHTML = hero(where, fmtNum(fs.meanSpeed, 3), " m/s", "Mean wind at 250 hPa", `${seasonCode(s.months)} average, ${R.vec.uaf.years[0]}–${R.vec.uaf.years.at(-1)}`);
       A.innerHTML = card("wind", "Mean wind", dial(fs.bearingDeg, fmtNum(fs.meanSpeed, 2), "m/s"), { half: true })
         + card("compass", "Direction", `<div class="wbig">${esc(fs.bearingName || "—")}</div><div class="wcap">mean flow over ${esc(where)}</div>`, { half: true });
       chartTitle = "Wind speed, regional mean"; spec = seriesSpec(s, R);

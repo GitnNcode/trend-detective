@@ -29,6 +29,11 @@ Earthdata credentials come from `~/.netrc` (`machine urs.earthdata.nasa.gov logi
 - Land variables (`soilwet`, `snow`, `runoff`) are undefined over ocean in MERRA-2 and stay missing.
 - The record is the run of consecutive months from 1980-01; a gap ends it (contract: no gaps).
 - Real files: all ten variables, 1980-01 to 2026-09 (561 months). 2026 is a partial year.
+- Added on 2026-11-15 for the app (same pipeline, same grid, same contract format):
+  - `u250`, `v250`: eastward and northward wind at 250 hPa (m/s), for the wind-vector loop. The speed of their monthly means matches `wind250` (for example 35.5 vs 35.6 m/s at 40°N 60°W, January 2000).
+  - `aod`: total aerosol optical depth at 550 nm (M2TMNXAER TOTEXTTAU), unitless, for the "city air" regions.
+  - `fzlev`: height of the 0 °C level in metres above sea level. Per native cell and month, a straight-line temperature profile between the ground (T2M at the surface height PHIS/g) and 500 hPa (T500 at height H500) is solved for 0 °C; it is the ground height where T2M is already at or below 0 °C, and H500 where T500 is still above 0 °C. Then coarsened like every other field. It is an estimate (real profiles are not straight lines) and is best used for trends.
+- Fetch for these: `python fetch.py u250 v250 aod fzlev`, then `python build.py u250 v250 aod fzlev` (needs the Earthdata login and the GES DISC application approved).
 - Known issue: `precip` (PRECTOTCORR) has a spike over southern Italy in 2026-02 (up to 134 mm/day on our grid, 415 at native resolution). It comes from NASA's recent, preliminary months and is left as delivered. `runoff` inherits it (up to 165 mm/day there), because MERRA-2's land model is driven by that precipitation. Use complete years up to 2025 for trends.
 
 ## First check against published numbers
@@ -47,6 +52,7 @@ Extent here is the area of cells with ice fraction at least 0.15 on our 1° grid
 - GMAO (2015), MERRA-2 tavgM_2d_flx_Nx (M2TMNXFLX) v5.12.4, GES DISC, doi:10.5067/0JRLVL8YV2Y4
 - GMAO (2015), MERRA-2 tavgM_2d_lnd_Nx (M2TMNXLND) v5.12.4, GES DISC, doi:10.5067/8S35XF81C28F
 - GMAO (2015), MERRA-2 const_2d_asm_Nx (M2C0NXASM) v5.12.4, GES DISC, doi:10.5067/ME5QX6Q5IGGU
+- GMAO (2015), MERRA-2 tavgM_2d_aer_Nx (M2TMNXAER) v5.12.4, GES DISC, doi:10.5067/FH9A0MLJPC7N
 - Gelaro, R., et al. (2017), The Modern-Era Retrospective Analysis for Research and Applications, Version 2 (MERRA-2), J. Climate, 30, 5419-5454.
 
 Libraries (for Lane 4's References): numpy, xarray, netCDF4, earthaccess, requests. Pipeline only; nothing here ships to the browser.

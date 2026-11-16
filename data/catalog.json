@@ -219,6 +219,94 @@
         "min": 1,
         "max": null
       }
+    },
+    {
+      "id": "aod",
+      "file": "aod.bin",
+      "source": "MERRA-2 M2TMNXAER, TOTEXTTAU (total aerosol extinction AOT, 550 nm)",
+      "units": "AOD",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.000103033,
+      "offset": 3.355372678,
+      "defaultBand": {
+        "min": 0.3,
+        "max": null
+      }
+    },
+    {
+      "id": "fzlev",
+      "file": "fzlev.bin",
+      "source": "MERRA-2 M2TMNXSLV, 0 °C level height from T2M, T500, H500 and surface height (PHIS)",
+      "units": "m",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.0912477,
+      "offset": 2937.8109492,
+      "defaultBand": {
+        "min": 4000,
+        "max": null
+      }
+    },
+    {
+      "id": "u250",
+      "file": "u250.bin",
+      "source": "MERRA-2 M2TMNXSLV, U250 (eastward wind)",
+      "units": "m/s",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.00168546,
+      "offset": 32.133294899999996,
+      "defaultBand": {
+        "min": 20,
+        "max": null
+      }
+    },
+    {
+      "id": "v250",
+      "file": "v250.bin",
+      "source": "MERRA-2 M2TMNXSLV, V250 (northward wind)",
+      "units": "m/s",
+      "start": "1980-01",
+      "nt": 561,
+      "grid": {
+        "nlat": 91,
+        "nlon": 144,
+        "lat0": -90.0,
+        "lon0": -180.0,
+        "dlat": 2.0,
+        "dlon": 2.5
+      },
+      "scale": 0.000981812,
+      "offset": -0.014727180000000001,
+      "defaultBand": {
+        "min": 5,
+        "max": null
+      }
     }
   ]
 }

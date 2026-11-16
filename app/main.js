@@ -34,7 +34,7 @@ const DEFAULTS = {
   layerView: "trend", chartKind: "trend", deseason: true,
   showTrail: true, showTrack: false, showFirst: true, showRings: false, showDipole: false,
   twin: null, prompt: null, cells: false, contours: true, coast: true, grid: true, hatch: true, showMonthly: false,
-  vecSource: "velocity", vecWindow: 15, compareId: "antarctic",
+  vecSource: "velocity", vecWindow: 15, compareId: "antarctic", period: null,
 };
 
 export const app = {
@@ -245,7 +245,7 @@ export async function update(changed = []) {
     const months = s.months, units = v.entry.units, A = app.A;
     const rs = memo(`rs|${vid}|${rkey(region)}`, () => E.regionSeries(v, region));
     const ds = memo(`ds|${vid}|${rkey(region)}`, () => E.deseasonalize(rs));
-    const annual = memo(`an|${vid}|${rkey(region)}|${mkey(s)}|${s.deseason}`, () => E.annualMeans(s.deseason && months.length < 12 ? ds : rs, months));
+    const annual = clipPeriod(memo(`an|${vid}|${rkey(region)}|${mkey(s)}|${s.deseason}`, () => E.annualMeans(s.deseason && months.length < 12 ? ds : rs, months)), s.period);
     R.rs = rs; R.ds = ds; R.annual = annual;
     R.trend = E.linearTrend(annual);
     R.mk = E.mannKendall(annual);
@@ -256,7 +256,7 @@ export async function update(changed = []) {
       const rb = app.content.regions.find((r) => r.id === s.compareId) ?? app.content.regions.find((r) => r.id === "antarctic");
       const rsB = memo(`rs|${vid}|${rkey(rb)}`, () => E.regionSeries(v, rb));
       const dsB = memo(`ds|${vid}|${rkey(rb)}`, () => E.deseasonalize(rsB));
-      const annB = E.annualMeans(s.deseason && months.length < 12 ? dsB : rsB, months);
+      const annB = clipPeriod(E.annualMeans(s.deseason && months.length < 12 ? dsB : rsB, months), s.period);
       const tB = E.linearTrend(annB), mkB = E.mannKendall(annB);
       R.regionB = rb;
       R.cmp = { annual: annB, trend: tB, mk: mkB, verdict: E.verdict(tB, mkB, units), empty: !annB.values.some(Number.isFinite) };
@@ -326,7 +326,7 @@ export async function update(changed = []) {
       R.tmapT2m = memo(`tm|t2m|${ALL_MONTHS.join(".")}`, () => E.trendMap(t2m, ALL_MONTHS));
     }
     if ((s.mode === "lineup" || s.mode === "atlas") && A) {
-      const ids = D.variableIds();
+      const ids = D.variableIds().filter((id) => !varStyle(id).hidden);
       const vs = await ensureVars(ids);
       if (my !== token) return;
       const byId = Object.fromEntries(ids.map((id, k) => [id, vs[k]]));
@@ -345,6 +345,13 @@ export async function update(changed = []) {
     hideLoader();
     W.toast(`Error: ${err.message}`);
   }
+}
+
+// Restrict a yearly series to the chosen trend period ([from, to] or null for all).
+export function clipPeriod(annual, period) {
+  if (!period) return annual;
+  const keep = annual.years.map((y) => y >= period[0] && y <= period[1]);
+  return { years: annual.years.filter((_, k) => keep[k]), values: Float64Array.from(Array.from(annual.values).filter((_, k) => keep[k])) };
 }
 
 const asyncMemo = new Map();
@@ -637,6 +644,7 @@ export const actions = {
     if (a.mode === "route") patch.route = a.route ?? "nsr";
     if (a.vecSource) patch.vecSource = a.vecSource;
     if (a.compare) patch.compareId = a.compare;
+    patch.period = a.period ?? null;
     if (a.mode === "vectors" && a.vecSource === "wind") patch.variable = "wind250";
     if (a.twin) patch.twin = a.twin;
     patch.layerView = a.layerView ?? (patch.mode === "map" ? "trend" : app.state.layerView);
@@ -678,7 +686,7 @@ async function boot() {
   await update(["init"]);
   requestAnimationFrame(tick);
   // First visit: run the loop once so the zone's movement is the first thing seen.
-  if (fresh) setTimeout(() => { setTime(0); setPlaying(true); }, 600);
+  if (fresh) setTimeout(() => { setTime(0); setPlaying(true); app.cases.hint(); }, 600);
 }
 
 function bindKeys() {

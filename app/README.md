@@ -14,10 +14,10 @@ Then visit http://localhost:8000/app/ (the root `index.html` redirects there). `
 
 ## Layout
 
-- **Menu bar:** Product, Field, Region, Season, Display (projection, fill, overlays), Procedures (guided cases and the question table), Help (methods and data).
-- **Toolbar:** loop controls (first, back, play, forward, last), frame slider and speed, yearly or monthly frames, season presets, and product controls (Shift threshold, route, location). On the right: draw a region box, export PNG, copy a link.
+- **Menu bar:** File (export figure, record loop, copy link), Product, Field, Region, Season (and trend period), Display (projection, fill, overlays), Procedures (guided cases and the question table), Help (methods and data).
+- **Toolbar:** loop controls (first, back, play, forward, last), frame slider and speed, yearly or monthly frames, season presets, and product controls (Shift threshold, route, location, comparison region, arrow source).
 - **Display:** a framed map (cylindrical equidistant, orthographic or polar stereographic) with discrete color steps, contour edges, black coastlines, lat/lon labels and a colorbar.
-- **Inspector:** the rate of change with its 95% interval, significance lamps (t-test, Mann–Kendall), the time series chart, the detection gauge and product extras.
+- **Inspector:** result cards: the headline rate with its 95% range, the two p-values, the chart, the detection gauge and product extras (compass dials, range bars).
 - **Status bar:** the cursor readout (position, value, local trend), the current frame, the data source and the data volume loaded.
 
 ## Products
@@ -31,9 +31,14 @@ Then visit http://localhost:8000/app/ (the root `index.html` redirects there). `
 | Climate analog | Where a place's 1980s climate is now, and where today's climate was in the 1980s |
 | Sea-ice route | Open-water months per year along the Northern Sea Route or Northwest Passage, with the choke point |
 | Field lineup | All ten fields tested for one region, ranked by evidence |
-| Trend atlas | Ten per-field trend maps on one display |
+| Trend atlas | Per-field trend maps on one display |
+| Compare regions | The same variable in two places: opposite-trend verdict, both outlined on the trend map |
+| Vector loop | White arrows that change every frame: climate velocity in moving 15-year windows, or 250 hPa wind (U, V) month by month |
+| Validation | MERRA-2 against NASA GISTEMP v4 and the NSIDC Sea Ice Index (`data/validation/`) |
 
-Keys: space plays the loop; ← and → step one frame; 1–8 switch products; B draws a region box.
+Also: a trend period (full record, 1980-2002, 2003-2025, since 2013) in the Season menu; File → Export figure, Record loop as video, Copy link.
+
+Keys: space plays the loop; ← and → step one frame; 1–9 and 0 switch products; B draws a region box; E exports; R records; L copies a link.
 
 ## Files
 

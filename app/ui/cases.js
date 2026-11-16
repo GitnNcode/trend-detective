@@ -25,6 +25,22 @@ export class CasePlayer {
     this.go(0);
   }
 
+  // First visit: a one-line pointer to the guided tour (dismissible, remembered).
+  hint() {
+    let seen = false;
+    try { seen = localStorage.getItem("td-hint") === "1"; } catch { /* storage blocked */ }
+    if (seen || this.case) return;
+    const first = this.app.content.cases.find((c) => c.id === "climate_on_the_move") ?? this.app.content.cases[0];
+    if (!first) return;
+    this.el.hidden = false;
+    this.el.innerHTML = `<div class="step">Welcome</div>
+      <div class="txt">Pick a product, field and region from the menu bar, or take the guided tour: <b>${esc(first.title)}</b>.</div>
+      <div class="ctl"><button class="tb on" data-go>Start tour</button><button class="tb icon" data-x title="Close">✕</button></div>`;
+    const done = () => { try { localStorage.setItem("td-hint", "1"); } catch { /* ignore */ } };
+    this.el.querySelector("[data-go]").addEventListener("click", () => { done(); this.start(first.id); });
+    this.el.querySelector("[data-x]").addEventListener("click", () => { done(); this.el.hidden = true; });
+  }
+
   stop() {
     clearTimeout(this.timer);
     this.case = null;

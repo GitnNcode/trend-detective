@@ -47,8 +47,10 @@ export function renderMenubar() {
     { id: "product", label: "Product", cur: mode.label, items: MODES.map((m, k) => ({ label: m.label, key: String(k + 1), mark: radio(s.mode === m.id), act: () => actions.setMode(m.id) })) },
     { id: "field", label: "Field", cur: code(s.variable), items: app.catalog.variables.filter((v) => !varStyle(v.id).hidden).map((v) => ({ label: `${code(v.id).padEnd(9, " ")} ${defOf(v.id).name}`, key: v.units, mark: radio(s.variable === v.id), title: defOf(v.id).plain, disabled: s.mode === "route" && v.id !== "seaice", act: () => actions.setVariable(v.id) })) },
     { id: "region", label: "Region", cur: s.custom ? "Box" : region.name, items: [...[...groups.entries()].flatMap(([t, rs]) => [{ hdr: t }, ...rs.map((r) => ({ label: r.name, mark: radio(!s.custom && s.regionId === r.id), act: () => actions.setRegion(r.id) }))]), { sep: true }, { label: "Draw box on map", key: "B", mark: radio(!!s.custom), act: () => startDraw() }] },
-    { id: "season", label: "Season", cur: seasonCode(s.months), items: [
+    { id: "season", label: "Season", cur: seasonCode(s.months) + (s.period ? ` · ${s.period[0]}–${s.period[1]}` : ""), items: [
       ...SEASONS.map(([n, m]) => ({ label: { ANN: "Annual mean", DJF: "Dec–Feb (DJF)", MAM: "Mar–May (MAM)", JJA: "Jun–Aug (JJA)", SON: "Sep–Nov (SON)" }[n], mark: radio(sameSet(m, s.months)), act: () => actions.setMonths(m) })),
+      { sep: true }, { hdr: "Trend period" },
+      ...[[null, "Full record"], [[1980, 2002], "1980–2002"], [[2003, 2025], "2003–2025"], [[2013, 2025], "Since 2013"]].map(([pr, lab]) => ({ label: lab, mark: radio(JSON.stringify(s.period ?? null) === JSON.stringify(pr)), act: () => actions.set({ period: pr }) })),
       { sep: true }, { hdr: "Single months (toggle)" },
       ...["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((name, k) => ({ label: name, mark: s.months.length < 12 && s.months.includes(k + 1) ? "✓" : "", keep: true, act: () => {
         const set = new Set(s.months.length === 12 ? [] : s.months);

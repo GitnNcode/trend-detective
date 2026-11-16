@@ -51,3 +51,13 @@ Team name, member names, Local Event, public URL of the deployed site, demo link
 3. Fill the table in `VALIDATION.md` from Lane 1's output.
 4. Fill every `[BRACKET]` in `SUBMISSION.md`, then paste it into the project page and use "Save Progress" often.
 5. Open the demo and site links in a private window on a second machine.
+
+
+## Status at 2026-11-15 16:00 (Lane 3)
+
+- **1. Contract additions:** adopted in `PLAN.md` (commit f411210) and implemented in the app.
+- **2. `edgeLat` rule:** fixed in the engine (Lane 2); the app uses `edgeKind`/`edgeUsed`.
+- **3. Route notes:** routes cross the date line correctly; land cells are stored as missing; the Northwest Passage result is labelled approximate.
+- **4. Resolution caveat:** stated in the app's Help → Methods dialog and in `docs/README.md`.
+- **5. Team fields:** still open (names, Local Event, demo link). The site will be at GitHub Pages once the repository owner enables it (Settings → Pages → `main`, `/ (root)`).
+- **6. Compliance:** no NASA logos or branding; AI use acknowledged in each folder README, the docs, commit trailers and the site's Help dialog. `SUBMISSION.md` lists which product features were suggested by Claude, for the team to confirm.
