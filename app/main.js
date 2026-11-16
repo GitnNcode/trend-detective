@@ -330,7 +330,7 @@ export async function update(changed = []) {
     if (!app.C) app.C = await import("./chart.js").catch((e) => { console.warn("chart.js not ready", e); return null; });
     if (my !== token) return;
     W.ensureChart();
-    app.map.setOptions({ cells: s.cells, contours: s.contours, coast: s.coast, grid: s.grid });
+    app.map.setOptions({ cells: s.cells, contours: s.contours, coast: s.coast, grid: s.grid, landFill: s.variable === "shipslow" ? "rgb(214,214,214)" : null });
 
     if (changed.some((k) => ["regionId", "custom", "variable", "proj", "mode", "init", "twin", "compareId", "voy"].includes(k))) {
       const pk = autoProjection(s, region);

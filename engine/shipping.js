@@ -310,7 +310,7 @@ export function viaOf(points) {
 // for every month, how much slower than calm, ice-free water a ship sails in
 // each sea cell, in percent. Wind counts at its average over all headings
 // (f = 0.6, as abeam); ice as in fastestPath; cells closed by ice are 100.
-// Land and the closed far south are missing. This is the field the lanes are
+// The closed far south is missing; land is filled near coasts (see below). This is the field the lanes are
 // routed through, so it is the map behind them.
 export function slowdownVar({ soil, ice, u, v }, ship = SHIP) {
   const g = soil.entry.grid, n = g.nlat * g.nlon;
@@ -338,6 +338,30 @@ export function slowdownVar({ soil, ice, u, v }, ship = SHIP) {
         pct = 100 * (1 - (1 - loss) / (1 + ship.iceK * c2));
       }
       data[t * n + c] = Math.round(pct * 100);
+    }
+  }
+  // Display only: extend the field two cells over the land edge (mean of the
+  // sea cells within two cells), so coarse coastal cells do not leave grey gaps
+  // at sea. The map paints the land on top, so the real coastline is the edge.
+  const ring = [];
+  for (let c = 0; c < n; c++) {
+    if (sea[c]) continue;
+    const i = Math.floor(c / g.nlon), j = c % g.nlon, la = latOf(g, i);
+    if (la < ship.southLimit || la > 88) continue;
+    const nb = [];
+    for (let di = -2; di <= 2; di++) {
+      const ii = i + di;
+      if (ii < 0 || ii >= g.nlat) continue;
+      for (let dj = -2; dj <= 2; dj++) { const q = ii * g.nlon + ((j + dj + g.nlon) % g.nlon); if (sea[q]) nb.push(q); }
+    }
+    if (nb.length) ring.push([c, nb]);
+  }
+  for (let t = 0; t < nt; t++) {
+    const b = t * n;
+    for (const [c, nb] of ring) {
+      let s = 0, k = 0;
+      for (const q of nb) { const r = data[b + q]; if (r !== MISSING) { s += r; k++; } }
+      if (k) data[b + c] = Math.round(s / k);
     }
   }
   const entry = {

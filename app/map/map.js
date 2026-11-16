@@ -491,6 +491,14 @@ export class MapView {
     ctx.beginPath();
     ctx.rect(f.x0, f.y0, f.x1 - f.x0, f.y1 - f.y0);
     ctx.clip();
+    // Optional land fill (ocean-only fields): paints the coarse field's
+    // overhang off the land, so the real coastline is the edge.
+    if (this.world && this.options.landFill) {
+      ctx.beginPath();
+      path(this.lowRes ? this.world.land110 : this.world.land);
+      ctx.fillStyle = this.options.landFill;
+      ctx.fill();
+    }
     if (this.options.grid) {
       const step = this._gridStep(p);
       ctx.beginPath();
