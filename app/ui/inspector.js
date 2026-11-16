@@ -153,12 +153,13 @@ export function renderInspector() {
   const heroEl = $("#iHero"), A = $("#iA"), B = $("#iB"), ch = $("#iChartHdr"), foot = $("#iFoot");
   const where = R.region.type === "global" ? "Whole Earth" : R.region.name;
   const def = defOf(s.variable);
-  let spec = null, level = "none", chartTitle = "", chartRight = "";
+  let spec = null, level = "none", chartTitle = "", chartRight = "", tip = "";
   A.innerHTML = ""; B.innerHTML = "";
 
   if (s.mode === "band" && R.bandSummary) {
     const bs = R.bandSummary, km = bs.edgeShiftKmPerDecade;
     level = bs.level;
+    tip = bs.sentence;
     const south = R.track?.hemisphere === "S";
     heroEl.innerHTML = hero(where, signed(km, 3), " km/dec", `${statusWord(bs.level)} · ${esc(bs.kind)}`, `Area ${signed(bs.areaPctPerDecade, 2)}% per decade · ${esc(def.name)}`);
     A.innerHTML = card("compass", "Edge", dial(Number.isFinite(km) ? (km >= 0 ? (south ? 180 : 0) : (south ? 0 : 180)) : NaN, signed(km, 3), "km/dec"), { half: true })
@@ -173,6 +174,7 @@ export function renderInspector() {
   } else if (s.mode === "route" && R.routeVerdict) {
     const vd = R.routeVerdict, ro = R.routeOpen;
     level = vd.level;
+    tip = vd.sentence.replace(/percentage points/g, "months");
     heroEl.innerHTML = hero(R.route.name, signed(vd.perDecade, 2), " months/dec", statusWord(vd.level), `L: ${signed(vd.ci95PerDecade[0], 2)}  H: ${signed(vd.ci95PerDecade[1], 2)}`);
     const first = ro.years.find((y, k) => ro.openMonths[k] > 0);
     A.innerHTML = card("ship", "First open", `<div class="wbig">${first ?? "never"}</div><div class="wcap">first year with an open month</div>`, { half: true })
@@ -226,6 +228,7 @@ export function renderInspector() {
     chartTitle = `${def.name}, global mean`; spec = seriesSpec(s, R);
   } else if (s.mode === "compare" && R.cmp) {
     const a = R.verdict, b = R.cmp.verdict;
+    tip = `${R.region.name}: ${a.sentence}\n${R.regionB.name}: ${b.sentence}`;
     const sa = Math.sign(a.perDecade), sb = Math.sign(b.perDecade);
     const opposite = sa !== sb && sa !== 0 && sb !== 0;
     const both = a.level !== "none" && b.level !== "none";
@@ -248,6 +251,7 @@ export function renderInspector() {
   } else {
     const vd = R.verdict;
     level = R.empty ? "none" : vd.level;
+    tip = R.empty ? "" : vd.sentence;
     if (R.empty) {
       heroEl.innerHTML = hero(where, "—", "", "No data here", `${esc(def.name)} is not defined in this region`);
     } else {
@@ -262,6 +266,8 @@ export function renderInspector() {
   }
 
   root.dataset.sky = skyOf(level);
+  heroEl.title = tip;
+  heroEl.setAttribute("aria-description", tip);
   ch.innerHTML = `${icon("chart")}<span>${esc(chartTitle)}</span>${chartRight ? `<em>${chartRight}</em>` : ""}`;
   foot.innerHTML = `<div class="wdef">${icon("pin")}<span><b>${esc(def.name)}.</b> ${esc(def.plain)}</span></div>`;
   ch.querySelectorAll("[data-ck]").forEach((b) => b.addEventListener("click", () => actions.set({ chartKind: b.dataset.ck })));

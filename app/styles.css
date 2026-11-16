@@ -130,6 +130,7 @@ input[type="range"].trange { width: 130px; accent-color: var(--accent); }
   text-align: center; padding: 18px 14px 15px; border-radius: var(--radius); box-shadow: var(--shadow);
   background: linear-gradient(180deg, var(--tint, #eaf2fd) 0%, #ffffff 78%);
 }
+.whero[title]:not([title=""]) { cursor: help; }
 .inspector[data-sky="clear"] { --tint: #e4effc; }
 .inspector[data-sky="partly"] { --tint: #fbf0dc; }
 .inspector[data-sky="overcast"] { --tint: #ececf1; }
